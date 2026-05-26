@@ -115,7 +115,7 @@ export default function LineupsScreen({ navigation }: any) {
               <View style={styles.cardPlayers}>
                 {item.response.players.slice(0, 5).map((p) => (
                   <Text key={p.atleta_id} style={styles.cardPlayer}>
-                    {p.apelido}
+                    {p.apelido} · {p.clube}
                     {p.role === 'capitao' ? ' (C)' : ''}
                   </Text>
                 ))}

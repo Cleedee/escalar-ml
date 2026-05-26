@@ -65,6 +65,32 @@ export interface CartolaStatus {
   times_escalados?: number;
 }
 
+export interface Atleta {
+  atleta_id: number;
+  apelido: string;
+  nome: string;
+  clube_id: number;
+  clube: string;
+  clube_nome: string;
+  posicao_id: number;
+  posicao: string;
+  posicao_nome: string;
+  status_id: number;
+  status: string;
+  preco: number;
+  media: number;
+  jogos: number;
+  variacao_num: number;
+  ultima_pontuacao: number;
+  potential_valorizacao: number;
+  preco_projetado: number;
+}
+
+export interface AtletasResponse {
+  total: number;
+  atletas: Atleta[];
+}
+
 export interface JustificarAtleta {
   atleta_id: number;
   apelido: string;

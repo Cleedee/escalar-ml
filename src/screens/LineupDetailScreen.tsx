@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Player } from '../types';
 import { deleteLineup } from '../services/storage';
 import { fetchPontuados } from '../services/api';
@@ -17,23 +17,12 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const { lineup } = route.params;
   const { response } = lineup;
   const [actualScores, setActualScores] = useState<Record<string, number> | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Excluir escalação',
-      `Tem certeza que deseja excluir "${lineup.nome}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteLineup(lineup.id);
-            navigation.goBack();
-          },
-        },
-      ]
-    );
+  const handleDelete = async () => {
+    setShowDeleteModal(false);
+    await deleteLineup(lineup.id);
+    navigation.goBack();
   };
 
   useEffect(() => {
@@ -87,8 +76,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 {posicoes[p.posicao] || p.posicao}
               </Text>
               <Text style={styles.playerName}>
-                {p.apelido}
-                {p.role === 'capitao' ? ' ⭐' : ''}
+                {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
               </Text>
             </View>
             <View style={styles.playerRight}>
@@ -115,8 +103,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             <Text style={styles.sectionTitle}>Técnico</Text>
             <View style={styles.tecnicoRow}>
               <View>
-                <Text style={styles.tecnicoName}>{response.tecnico.apelido}</Text>
-                <Text style={styles.tecnicoClub}>{response.tecnico.clube}</Text>
+                <Text style={styles.tecnicoName}>
+                  {response.tecnico.apelido} · {response.tecnico.clube}
+                </Text>
               </View>
               <View style={styles.playerRight}>
                 <Text style={styles.playerClub}>
@@ -185,10 +174,35 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       <TouchableOpacity
         style={styles.deleteBtn}
-        onPress={handleDelete}
+        onPress={() => setShowDeleteModal(true)}
       >
         <Text style={styles.deleteBtnText}>Excluir escalação</Text>
       </TouchableOpacity>
+
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Excluir escalação</Text>
+            <Text style={styles.modalMsg}>
+              Tem certeza que deseja excluir "{lineup.nome}"?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirm}
+                onPress={handleDelete}
+              >
+                <Text style={styles.modalConfirmText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -385,6 +399,61 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     color: '#ef4444',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f8fafc',
+    marginBottom: 8,
+  },
+  modalMsg: {
+    fontSize: 14,
+    color: '#94a3b8',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancel: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalConfirm: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

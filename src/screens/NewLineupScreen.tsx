@@ -303,8 +303,7 @@ function ResultView({
                 {posicoes[p.posicao] || p.posicao}
               </Text>
               <Text style={styles.playerName}>
-                {p.apelido}
-                {p.role === 'capitao' ? ' ⭐' : ''}
+                {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
               </Text>
             </View>
             <View style={styles.playerRight}>
@@ -331,8 +330,9 @@ function ResultView({
             <Text style={styles.sectionTitle}>Técnico</Text>
             <View style={styles.tecnicoRow}>
               <View>
-                <Text style={styles.tecnicoName}>{response.tecnico.apelido}</Text>
-                <Text style={styles.tecnicoClub}>{response.tecnico.clube}</Text>
+                <Text style={styles.tecnicoName}>
+                  {response.tecnico.apelido} · {response.tecnico.clube}
+                </Text>
               </View>
               <View style={styles.playerRight}>
                 <Text style={styles.playerClub}>

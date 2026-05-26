@@ -7,6 +7,7 @@ import LineupsScreen from './src/screens/LineupsScreen';
 import NewLineupScreen from './src/screens/NewLineupScreen';
 import LineupDetailScreen from './src/screens/LineupDetailScreen';
 import JustificarScreen from './src/screens/JustificarScreen';
+import AtletasScreen from './src/screens/AtletasScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -52,6 +53,15 @@ export default function App() {
           options={{
             tabBarIcon: ({ color }) => (
               <Text style={{ fontSize: 18, color }}>📋</Text>
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Atletas"
+          component={AtletasScreen}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Text style={{ fontSize: 18, color }}>👤</Text>
             ),
           }}
         />
