@@ -1,0 +1,161 @@
+export interface OtimizarParams {
+  orcamento: number;
+  formacao: string;
+  perfil: 'neutro' | 'agressivo' | 'conservador';
+  modo: 'max-pontos' | 'valorizacao';
+  peso_valorizacao?: number;
+  incluir_duvidosos: boolean;
+  reserva_luxo: boolean;
+}
+
+export interface Player {
+  atleta_id: number;
+  apelido: string;
+  posicao: string;
+  preco: number;
+  previsto: number;
+  clube: string;
+  role?: 'capitao';
+}
+
+export interface Reserva {
+  apelido: string;
+  luxo: boolean;
+}
+
+export interface Tecnico {
+  apelido: string;
+  clube: string;
+  atleta_id: number;
+  preco: number;
+  previsto: number;
+}
+
+export interface OtimizarResponse {
+  formation: string;
+  pontos_previstos: number;
+  orcamento_usado: number;
+  players: Player[];
+  tecnico: Tecnico;
+  reservas: Record<string, Reserva>;
+  comparacao: Array<{ formacao: string; pontos_previstos: number }>;
+}
+
+export interface Lineup {
+  id: string;
+  nome: string;
+  rodada: number;
+  atribuido_a_team_id?: string;
+  created_at: string;
+  params: OtimizarParams;
+  response: OtimizarResponse;
+}
+
+export interface CartolaStatus {
+  rodada_atual: number;
+  status_mercado: number;
+  fechamento?: {
+    timestamp: number;
+    dia: number;
+    mes: number;
+    ano: number;
+    hora: number;
+    minuto: number;
+  };
+  times_escalados?: number;
+}
+
+export interface JustificarAtleta {
+  atleta_id: number;
+  apelido: string;
+  clube: string;
+  posicao: string;
+  preco: number;
+  media: number;
+  jogos: number;
+  previsao: number;
+  status: string;
+  escalacoes: number;
+  variacao_num: number;
+  eficiencia: number;
+}
+
+export interface ScoutItem {
+  media: number;
+  pontos: number;
+}
+
+export interface DesempenhoRodada {
+  rodada: number;
+  pontos: number;
+}
+
+export interface DesempenhoRecente {
+  rodadas: DesempenhoRodada[];
+  media_ult3: number;
+  media_ult5: number;
+}
+
+export interface PartidaInfo {
+  casa: boolean;
+  adversario: string;
+  adversario_id: number;
+}
+
+export interface Metodologia {
+  tipo: string;
+  descricao: string;
+  formula: string;
+}
+
+export interface AnalisePerfil {
+  perfil: string;
+  selecionado: boolean;
+  concorrentes: any[];
+}
+
+export interface JustificarResponse {
+  atleta: JustificarAtleta;
+  matches: Array<{ atleta_id: number; apelido: string; clube: string }>;
+  scout: Record<string, ScoutItem>;
+  desempenho_recente: DesempenhoRecente;
+  partida: PartidaInfo;
+  metodologia: Metodologia;
+  analise_perfis: AnalisePerfil[];
+}
+
+export interface PontuadoAthlete {
+  scout: Record<string, number>;
+  apelido: string;
+  foto: string;
+  pontuacao: number;
+  posicao_id: number;
+  clube_id: number;
+  entrou_em_campo: boolean;
+}
+
+export interface PontuadosResponse {
+  atletas: Record<string, PontuadoAthlete>;
+  rodada: number;
+  total_atletas: number;
+}
+
+export const STATUS_MAP: Record<number, { label: string; color: string }> = {
+  1: { label: 'Mercado Aberto', color: '#22c55e' },
+  2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },
+  3: { label: 'Rodada Concluída', color: '#3b82f6' },
+  4: { label: 'Em Atualização', color: '#a855f7' },
+  5: { label: 'Em Manutenção', color: '#ef4444' },
+};
+
+export const FORMACOES = [
+  'auto',
+  '4-3-3',
+  '4-4-2',
+  '4-2-4',
+  '3-4-3',
+  '3-5-2',
+  '5-3-2',
+  '5-4-1',
+  '4-5-1',
+];

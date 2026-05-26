@@ -1,0 +1,80 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="dotGlow">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#22c55e" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="400" rx="80" fill="url(#bg)"/>
+
+  <!-- Shield/pitch shape -->
+  <path d="M200 55 L340 120 L340 250 Q340 340 200 375 Q60 340 60 250 L60 120 Z"
+        fill="url(#pitch)" filter="url(#shadow)"/>
+
+  <!-- Field markings -->
+  <path d="M200 80 L320 135 L320 245 Q320 320 200 350 Q80 320 80 245 L80 135 Z"
+        fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  <line x1="200" y1="80" x2="200" y2="350" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+  <circle cx="200" cy="215" r="28" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+
+  <!-- Nodes (players) in 4-3-3, connected by "ML" lines -->
+  <!-- GK -->
+  <circle cx="200" cy="325" r="7" fill="#fff" filter="url(#dotGlow)"/>
+  <!-- DEF (4) -->
+  <circle cx="140" cy="270" r="7" fill="#fff"/>
+  <circle cx="180" cy="265" r="7" fill="#fff"/>
+  <circle cx="220" cy="265" r="7" fill="#fff"/>
+  <circle cx="260" cy="270" r="7" fill="#fff"/>
+  <!-- MID (3) -->
+  <circle cx="165" cy="205" r="7" fill="#fff"/>
+  <circle cx="200" cy="195" r="9" fill="#f97316" filter="url(#dotGlow)"/> <!-- Captain -->
+  <circle cx="235" cy="205" r="7" fill="#fff"/>
+  <!-- FWD (3) -->
+  <circle cx="165" cy="135" r="7" fill="#fff"/>
+  <circle cx="200" cy="125" r="7" fill="#fff"/>
+  <circle cx="235" cy="135" r="7" fill="#fff"/>
+
+  <!-- Optimization lines (connecting dots as ML graph) -->
+  <g stroke="rgba(255,255,255,0.12)" stroke-width="1.5" fill="none">
+    <line x1="200" y1="325" x2="200" y2="265"/>
+    <line x1="165" y1="205" x2="165" y2="135"/>
+    <line x1="235" y1="205" x2="235" y2="135"/>
+    <line x1="180" y1="265" x2="165" y2="205"/>
+    <line x1="220" y1="265" x2="235" y2="205"/>
+    <line x1="140" y1="270" x2="165" y2="205"/>
+    <line x1="260" y1="270" x2="235" y2="205"/>
+    <line x1="200" y1="195" x2="200" y2="125"/>
+    <line x1="165" y1="205" x2="200" y2="195"/>
+    <line x1="235" y1="205" x2="200" y2="195"/>
+    <line x1="180" y1="265" x2="220" y2="265"/>
+  </g>
+
+  <!-- Glowing ML accent line (subtle circuit-like paths) -->
+  <path d="M120 185 Q160 160 165 135"
+        fill="none" stroke="url(#glow)" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>
+  <path d="M280 185 Q240 160 235 135"
+        fill="none" stroke="url(#glow)" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>
+
+  <!-- Text -->
+  <text x="200" y="470" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        font-size="42" font-weight="700" fill="#f8fafc" letter-spacing="2">
+    EscalarML
+  </text>
+</svg>

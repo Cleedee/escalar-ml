@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "EscalarML",
+    "slug": "escalar-ml",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+    }
+  }
+}
