@@ -1,4 +1,4 @@
-import { AtletasResponse, CartolaStatus, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, CartolaStatus, CartolaTeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 /* export const API_BASE = 'http://192.168.18.9:8088'; */
 /* export const API_BASE = 'http://10.22.196.40:8088'; */
@@ -16,8 +16,17 @@ export async function fetchPontuados(rodada: number): Promise<PontuadosResponse>
   return res.json();
 }
 
-export async function fetchJustificar(q: string): Promise<JustificarResponse> {
-  const res = await fetch(`${API_BASE}/justificar?q=${encodeURIComponent(q)}`);
+export async function fetchJustificar(q?: string, atleta_id?: number, clube?: string): Promise<JustificarResponse> {
+  let url: string;
+  if (atleta_id) {
+    url = `${API_BASE}/justificar/${atleta_id}`;
+  } else {
+    const search = new URLSearchParams();
+    if (q) search.set('q', q);
+    if (clube) search.set('clube', clube);
+    url = `${API_BASE}/justificar?${search.toString()}`;
+  }
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -42,6 +51,12 @@ export async function postOtimizar(params: OtimizarParams): Promise<OtimizarResp
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchCartolaTeams(q: string): Promise<CartolaTeamSearchResult[]> {
+  const res = await fetch(`${API_BASE}/cartola/times?q=${encodeURIComponent(q)}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

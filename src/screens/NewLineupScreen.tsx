@@ -315,7 +315,7 @@ function ResultView({
             </View>
             <TouchableOpacity
               style={styles.detailBtn}
-              onPress={() => navigation.navigate('Justificar', { apelido: p.apelido })}
+              onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}
             >
               <Text style={styles.detailBtnText}>i</Text>
             </TouchableOpacity>
@@ -345,7 +345,7 @@ function ResultView({
               </View>
               <TouchableOpacity
                 style={styles.detailBtn}
-                onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido })}
+                onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}
               >
                 <Text style={styles.detailBtnText}>i</Text>
               </TouchableOpacity>

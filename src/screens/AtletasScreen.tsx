@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Atleta } from '../types';
 import { fetchAtletas } from '../services/api';
+
+type SortKey = 'preco_desc' | 'preco_asc' | 'media_desc' | 'media_asc';
 
 const POSICOES = [
   { key: '', label: 'Todas' },
@@ -30,6 +32,13 @@ const STATUS_LIST = [
   { key: 'Nulo', label: 'Nulo' },
 ];
 
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'preco_desc', label: 'Preço ↓' },
+  { key: 'preco_asc', label: 'Preço ↑' },
+  { key: 'media_desc', label: 'Média ↓' },
+  { key: 'media_asc', label: 'Média ↑' },
+];
+
 export default function AtletasScreen() {
   const [query, setQuery] = useState('');
   const [posicao, setPosicao] = useState('');
@@ -37,6 +46,10 @@ export default function AtletasScreen() {
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('preco_desc');
+  const [precoMin, setPrecoMin] = useState('');
+  const [precoMax, setPrecoMax] = useState('');
+  const [mediaMin, setMediaMin] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFetch = (q: string, p: string, s: string) => {
@@ -61,6 +74,29 @@ export default function AtletasScreen() {
       doFetch(text, posicao, status);
     }, 350);
   };
+
+  const filtered = useMemo(() => {
+    let list = [...atletas];
+
+    const pMin = precoMin ? parseFloat(precoMin) : 0;
+    const pMax = precoMax ? parseFloat(precoMax) : Infinity;
+    const mMin = mediaMin ? parseFloat(mediaMin) : 0;
+
+    if (pMin > 0 || pMax < Infinity || mMin > 0) {
+      list = list.filter((a) => a.preco >= pMin && a.preco <= pMax && a.media >= mMin);
+    }
+
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case 'preco_desc': return b.preco - a.preco;
+        case 'preco_asc': return a.preco - b.preco;
+        case 'media_desc': return b.media - a.media;
+        case 'media_asc': return a.media - b.media;
+      }
+    });
+
+    return list;
+  }, [atletas, sortBy, precoMin, precoMax, mediaMin]);
 
   return (
     <View style={styles.container}>
@@ -112,8 +148,56 @@ export default function AtletasScreen() {
         )}
       />
 
+      <Text style={styles.filterLabel}>Ordenar</Text>
+      <FlatList
+        horizontal
+        data={SORT_OPTIONS}
+        keyExtractor={(item) => item.key}
+        style={styles.filterList}
+        showsHorizontalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.filterChip, sortBy === item.key && styles.filterChipActive]}
+            onPress={() => setSortBy(item.key)}
+          >
+            <Text style={[styles.filterChipText, sortBy === item.key && styles.filterChipTextActive]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+
+      <Text style={styles.filterLabel}>Filtrar</Text>
+      <View style={styles.filterRow}>
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Preço min"
+          placeholderTextColor="#64748b"
+          keyboardType="decimal-pad"
+          value={precoMin}
+          onChangeText={setPrecoMin}
+        />
+        <Text style={styles.filterSep}>–</Text>
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Preço max"
+          placeholderTextColor="#64748b"
+          keyboardType="decimal-pad"
+          value={precoMax}
+          onChangeText={setPrecoMax}
+        />
+        <TextInput
+          style={[styles.filterInput, { marginLeft: 8 }]}
+          placeholder="Média min"
+          placeholderTextColor="#64748b"
+          keyboardType="decimal-pad"
+          value={mediaMin}
+          onChangeText={setMediaMin}
+        />
+      </View>
+
       <Text style={styles.resultCount}>
-        {total} atleta{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+        {filtered.length} atleta{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
       </Text>
 
       {loading ? (
@@ -122,7 +206,7 @@ export default function AtletasScreen() {
         </View>
       ) : (
         <FlatList
-          data={atletas}
+          data={filtered}
           keyExtractor={(item) => String(item.atleta_id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
@@ -322,5 +406,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3b82f6',
     fontWeight: '600',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  filterInput: {
+    flex: 1,
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    color: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  filterSep: {
+    color: '#64748b',
+    marginHorizontal: 6,
+    fontSize: 14,
   },
 });

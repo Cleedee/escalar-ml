@@ -51,6 +51,37 @@ export interface Lineup {
   response: OtimizarResponse;
 }
 
+export interface Team {
+  id: string;
+  nome: string;
+  proprietario: string;
+  time_id?: string;
+  slug?: string;
+  patrimonio: number;
+  ranking: number;
+  total_acumulado: number;
+  is_user: boolean;
+}
+
+export interface League {
+  id: string;
+  nome: string;
+  rodada_inicial: number;
+  rodada_final: number;
+  modalidade: 'patrimonio' | 'pontuacao';
+  times: Team[];
+  created_at: string;
+}
+
+export interface CartolaTeamSearchResult {
+  rodada_time_id: number;
+  nome_cartola: string;
+  slug: string;
+  url_escudo_png: string;
+  nome: string;
+  time_id: string;
+}
+
 export interface CartolaStatus {
   rodada_atual: number;
   status_mercado: number;

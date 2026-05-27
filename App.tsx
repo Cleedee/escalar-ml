@@ -8,18 +8,30 @@ import NewLineupScreen from './src/screens/NewLineupScreen';
 import LineupDetailScreen from './src/screens/LineupDetailScreen';
 import JustificarScreen from './src/screens/JustificarScreen';
 import AtletasScreen from './src/screens/AtletasScreen';
+import LeaguesScreen from './src/screens/LeaguesScreen';
+import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const Stack1 = createNativeStackNavigator();
+const Stack2 = createNativeStackNavigator();
 
 function LineupsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="LineupsList" component={LineupsScreen} />
-      <Stack.Screen name="NewLineup" component={NewLineupScreen} />
-      <Stack.Screen name="LineupDetail" component={LineupDetailScreen} />
-      <Stack.Screen name="Justificar" component={JustificarScreen} />
-    </Stack.Navigator>
+    <Stack1.Navigator screenOptions={{ headerShown: false }}>
+      <Stack1.Screen name="LineupsList" component={LineupsScreen} />
+      <Stack1.Screen name="NewLineup" component={NewLineupScreen} />
+      <Stack1.Screen name="LineupDetail" component={LineupDetailScreen} />
+      <Stack1.Screen name="Justificar" component={JustificarScreen} />
+    </Stack1.Navigator>
+  );
+}
+
+function LigasStack() {
+  return (
+    <Stack2.Navigator screenOptions={{ headerShown: false }}>
+      <Stack2.Screen name="LeaguesList" component={LeaguesScreen} />
+      <Stack2.Screen name="LeagueDetail" component={LeagueDetailScreen} />
+    </Stack2.Navigator>
   );
 }
 
@@ -62,6 +74,15 @@ export default function App() {
           options={{
             tabBarIcon: ({ color }) => (
               <Text style={{ fontSize: 18, color }}>👤</Text>
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Ligas"
+          component={LigasStack}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Text style={{ fontSize: 18, color }}>🏆</Text>
             ),
           }}
         />
