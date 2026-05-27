@@ -1,4 +1,4 @@
-import { AtletasResponse, CartolaStatus, CartolaTeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaStatus, CartolaTeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 /* export const API_BASE = 'http://192.168.18.9:8088'; */
 /* export const API_BASE = 'http://10.22.196.40:8088'; */
@@ -57,6 +57,16 @@ export async function postOtimizar(params: OtimizarParams): Promise<OtimizarResp
 
 export async function fetchCartolaTeams(q: string): Promise<CartolaTeamSearchResult[]> {
   const res = await fetch(`${API_BASE}/cartola/times?q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function postBotEscalar(params: BotEscalarRequest): Promise<BotEscalarResponse> {
+  const res = await fetch(`${API_BASE}/bot/escalar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

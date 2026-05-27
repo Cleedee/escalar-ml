@@ -11,7 +11,12 @@ export async function getLineups(): Promise<Lineup[]> {
 
 export async function saveLineup(lineup: Lineup): Promise<void> {
   const lineups = await getLineups();
-  lineups.unshift(lineup);
+  const idx = lineups.findIndex((l) => l.id === lineup.id);
+  if (idx >= 0) {
+    lineups[idx] = lineup;
+  } else {
+    lineups.unshift(lineup);
+  }
   await AsyncStorage.setItem(LINEUPS_KEY, JSON.stringify(lineups));
 }
 

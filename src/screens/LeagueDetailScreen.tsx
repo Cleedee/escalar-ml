@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,9 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CartolaTeamSearchResult, League, Team } from '../types';
-import { fetchCartolaTeams, fetchStatus } from '../services/api';
-import { saveLeague } from '../services/storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { BotEscalarRequest, BotEscalarResponse, CartolaTeamSearchResult, League, Lineup, OtimizarParams, Player, Reserva, Tecnico, Team } from '../types';
+import { fetchCartolaTeams, fetchStatus, postBotEscalar } from '../services/api';
+import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 
@@ -36,6 +37,29 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [cartolaResults, setCartolaResults] = useState<CartolaTeamSearchResult[]>([]);
   const [cartolaLoading, setCartolaLoading] = useState(false);
   const cartolaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isBot, setIsBot] = useState(false);
+  const [cartoletasIniciais, setCartoletasIniciais] = useState('');
+  const [posicaoCampo, setPosicaoCampo] = useState('');
+  const [estrategia, setEstrategia] = useState<'auto' | 'manual'>('auto');
+  const [modoBot, setModoBot] = useState<'max-pontos' | 'valorizacao'>('max-pontos');
+  const [perfilBot, setPerfilBot] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
+  const [pesoBot, setPesoBot] = useState('');
+  const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
+  const [botResult, setBotResult] = useState<BotEscalarResponse | null>(null);
+  const [botLoading, setBotLoading] = useState(false);
+  const [rodadaAtual, setRodadaAtual] = useState(1);
+  const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
+  const [editModo, setEditModo] = useState<'max-pontos' | 'valorizacao'>('max-pontos');
+  const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
+  const [editPeso, setEditPeso] = useState('');
+  const [lineups, setLineups] = useState<Lineup[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchStatus().then((s) => setRodadaAtual(s.rodada_atual)).catch(() => {});
+      getLineups().then(setLineups).catch(() => {});
+    }, [])
+  );
 
   useEffect(() => {
     saveLeague(league);
@@ -51,6 +75,13 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setTimeId('');
     setPatrimonio('');
     setRanking('');
+    setIsBot(false);
+    setCartoletasIniciais('');
+    setPosicaoCampo('');
+    setEstrategia('auto');
+    setModoBot('max-pontos');
+    setPerfilBot('neutro');
+    setPesoBot('');
     setShowTeamForm(true);
   };
 
@@ -61,6 +92,13 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setTimeId(team.time_id || '');
     setPatrimonio(String(team.patrimonio));
     setRanking(String(team.ranking));
+    setIsBot(team.is_bot || false);
+    setCartoletasIniciais(team.cartoletas_iniciais ? String(team.cartoletas_iniciais) : '');
+    setPosicaoCampo(team.posicao ? String(team.posicao) : '');
+    setEstrategia(team.estrategia || 'auto');
+    setModoBot(team.modo || 'max-pontos');
+    setPerfilBot(team.perfil || 'neutro');
+    setPesoBot(team.peso ? String(team.peso) : '');
     setShowTeamForm(true);
   };
 
@@ -69,16 +107,25 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     const p = parseFloat(patrimonio) || 0;
     const r = parseFloat(ranking) || 0;
     const total = modalidade === 'patrimonio' ? p : r;
+    const ci = parseFloat(cartoletasIniciais) || undefined;
     const team: Team = {
       id: editTeamId || Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       nome: nome.trim(),
       proprietario: proprietario.trim(),
       time_id: timeId.trim() || undefined,
       patrimonio: p,
-      ranking: r,
+      ranking: isBot ? 0 : r,
       total_acumulado: total,
       is_user: false,
-    };
+      is_bot: isBot || undefined,
+      cartoletas_iniciais: isBot ? ci : undefined,
+      posicao: isBot ? (parseInt(posicaoCampo) || undefined) : undefined,
+      ativo: isBot ? true : undefined,
+      estrategia: isBot ? estrategia : undefined,
+      modo: isBot ? modoBot : undefined,
+      perfil: isBot ? perfilBot : undefined,
+      peso: isBot ? (parseFloat(pesoBot) || undefined) : undefined,
+    }; 
     const times = editTeamId
       ? league.times.map((t) => (t.id === editTeamId ? team : t))
       : [...league.times, team];
@@ -136,6 +183,132 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setCartolaResults([]);
   };
 
+  const openGerenciarBot = (bot: Team) => {
+    setGerenciandoBot(bot);
+    setEditEstrategia(bot.estrategia || 'auto');
+    setEditModo(bot.modo || 'max-pontos');
+    setEditPerfil(bot.perfil || 'neutro');
+    setEditPeso(bot.peso ? String(bot.peso) : '');
+    setBotResult(null);
+  };
+
+  const salvarEstrategiaBot = () => {
+    if (!gerenciandoBot) return;
+    const updated: Team = {
+      ...gerenciandoBot,
+      estrategia: editEstrategia,
+      modo: editModo,
+      perfil: editPerfil,
+      peso: parseFloat(editPeso) || undefined,
+    };
+    setLeague({
+      ...league,
+      times: league.times.map((t) => (t.id === updated.id ? updated : t)),
+    });
+    setGerenciandoBot(updated);
+  };
+
+  const closeGerenciarBot = () => {
+    setGerenciandoBot(null);
+    setBotResult(null);
+  };
+
+  function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team): { params: OtimizarParams; response: Lineup['response'] } {
+    const mapPlayer = (p: BotEscalarResponse['players'][0]): Player => ({
+      atleta_id: p.atleta_id,
+      apelido: p.apelido,
+      posicao: p.posicao,
+      preco: p.preco,
+      previsto: p.previsto,
+      clube: p.clube,
+      role: p.role,
+    });
+    const mapTecnico = (p: BotEscalarResponse['tecnico']): Tecnico => ({
+      atleta_id: p.atleta_id,
+      apelido: p.apelido,
+      clube: p.clube,
+      preco: p.preco,
+      previsto: p.previsto,
+    });
+    const reservas: Record<string, Reserva> = {};
+    for (const [pos, r] of Object.entries(botRes.reservas)) {
+      reservas[pos] = { apelido: r.apelido, luxo: false };
+    }
+    return {
+      params: {
+        orcamento: bot.patrimonio,
+        formacao: botRes.formacao,
+        perfil: editPerfil,
+        modo: editModo,
+        peso_valorizacao: editPeso ? parseFloat(editPeso) : undefined,
+        incluir_duvidosos: false,
+        reserva_luxo: true,
+      },
+      response: {
+        formation: botRes.formacao,
+        pontos_previstos: botRes.pontos_previstos,
+        orcamento_usado: botRes.orcamento_usado,
+        players: botRes.players.map(mapPlayer),
+        tecnico: mapTecnico(botRes.tecnico),
+        reservas,
+        comparacao: [],
+      },
+    };
+  }
+
+  const handleEscalarBot = async () => {
+    const bot = gerenciandoBot;
+    if (!bot?.is_bot) return;
+    setBotLoading(true);
+    setBotResult(null);
+    try {
+      const lider = sorted[0];
+      const proximo = sorted.find((t) => t.total_acumulado > bot.total_acumulado && t.id !== bot.id);
+      const params: BotEscalarRequest = {
+        nome: bot.nome,
+        cartoletas_iniciais: bot.cartoletas_iniciais || bot.patrimonio,
+        orcamento_atual: bot.patrimonio,
+        total_pontos: bot.total_acumulado,
+        posicao: bot.posicao || league.times.length,
+        total_participantes: league.times.length,
+        rodada_atual: rodadaAtual,
+        rodada_inicio: league.rodada_inicial,
+        rodada_fim: league.rodada_final,
+        pontos_lider: lider?.total_acumulado || 0,
+        pontos_proximo: proximo ? proximo.total_acumulado - bot.total_acumulado : 0,
+        modalidade: league.modalidade,
+      };
+      if (editEstrategia === 'manual') {
+        params.modo = editModo;
+        params.perfil = editPerfil;
+        if (editPeso) params.peso_valorizacao = parseFloat(editPeso);
+      }
+      const result = await postBotEscalar(params);
+      setBotResult(result);
+
+      const lineups = await getLineups();
+      const existingIdx = lineups.findIndex(
+        (l) => l.atribuido_a_team_id === bot.id && l.rodada === rodadaAtual
+      );
+      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot);
+      const lineup: Lineup = {
+        id: existingIdx >= 0 ? lineups[existingIdx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        nome: `${bot.nome} - R${rodadaAtual}`,
+        rodada: rodadaAtual,
+        atribuido_a_team_id: bot.id,
+        created_at: new Date().toISOString(),
+        params: otimizarParams,
+        response,
+        estrategia: result.estrategia,
+      };
+      await saveLineup(lineup);
+    } catch (e: any) {
+      setBotResult(null);
+    } finally {
+      setBotLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -169,29 +342,49 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
           </View>
         }
         renderItem={({ item, index }) => (
-          <TouchableOpacity style={styles.teamCard} onPress={() => openEdit(item)}>
-            <View style={styles.posRow}>
-              <Text style={styles.pos}>{index + 1}º</Text>
-              <View style={styles.teamInfo}>
-                <Text style={styles.teamNome}>{item.nome}</Text>
-                <Text style={styles.teamProp}>{item.proprietario}</Text>
-                {item.time_id && <Text style={styles.teamId}>ID: {item.time_id}</Text>}
+          <View style={styles.teamCard}>
+            <TouchableOpacity style={styles.teamCardTouch} onPress={() => openEdit(item)}>
+              <View style={styles.posRow}>
+                <Text style={styles.pos}>{index + 1}º</Text>
+                <View style={styles.teamInfo}>
+                  <View style={styles.teamNomeRow}>
+                    <Text style={styles.teamNome}>{item.nome}</Text>
+                    {item.is_bot && <Text style={styles.botBadge}> 🤖</Text>}
+                  </View>
+                  <Text style={styles.teamProp}>{item.proprietario}</Text>
+                  {item.time_id && <Text style={styles.teamId}>ID: {item.time_id}</Text>}
+                </View>
               </View>
-            </View>
-            <View style={styles.statsCol}>
-              <Text style={styles.statTotal}>
-                {item.total_acumulado.toFixed(2)}
-              </Text>
-              {modalidade === 'patrimonio' ? (
-                <Text style={styles.statSub}>Pat: {item.patrimonio.toFixed(2)}</Text>
-              ) : (
-                <Text style={styles.statSub}>Rank: {item.ranking.toFixed(2)}</Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => handleDeleteTeam(item.id)}>
-              <Text style={styles.removeBtn}>✕</Text>
+              <View style={styles.statsCol}>
+                <Text style={styles.statTotal}>
+                  {item.total_acumulado.toFixed(2)}
+                </Text>
+                {modalidade === 'patrimonio' ? (
+                  <Text style={styles.statSub}>Pat: {item.patrimonio.toFixed(2)}</Text>
+                ) : (
+                  <Text style={styles.statSub}>Rank: {item.ranking.toFixed(2)}</Text>
+                )}
+              </View>
             </TouchableOpacity>
-          </TouchableOpacity>
+            <View style={styles.teamActions}>
+              {(() => {
+                const teamLineup = lineups.find((l) => l.atribuido_a_team_id === item.id && l.rodada === rodadaAtual);
+                return teamLineup ? (
+                  <TouchableOpacity style={styles.lineupActionBtn} onPress={() => navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup: teamLineup } })}>
+                    <Text style={styles.lineupActionBtnText}>📋</Text>
+                  </TouchableOpacity>
+                ) : null;
+              })()}
+              {item.is_bot && (
+                <TouchableOpacity style={styles.botActionBtn} onPress={() => openGerenciarBot(item)}>
+                  <Text style={styles.botActionBtnText}>⚙</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => handleDeleteTeam(item.id)}>
+                <Text style={styles.removeBtn}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       />
 
@@ -213,6 +406,16 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
               <Text style={styles.label}>Nome do time</Text>
               <TextInput style={styles.input} value={nome} onChangeText={setNome} placeholder="Ex: FFort EC" placeholderTextColor="#64748b" />
+
+              <View style={styles.toggleRow}>
+                <Text style={styles.toggleLabel}>Bot (automático)</Text>
+                <TouchableOpacity
+                  style={[styles.toggle, isBot && styles.toggleActive]}
+                  onPress={() => setIsBot(!isBot)}
+                >
+                  <View style={[styles.toggleThumb, isBot && styles.toggleThumbActive]} />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity style={styles.cartolaSearchBtn} onPress={() => setShowCartolaSearch(true)}>
                 <Text style={styles.cartolaSearchBtnText}>Buscar no Cartola</Text>
@@ -259,12 +462,92 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               <Text style={styles.label}>Patrimônio</Text>
               <TextInput style={styles.input} value={patrimonio} onChangeText={setPatrimonio} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
-              <Text style={styles.label}>Ranking</Text>
-              <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
+              {isBot ? (
+                <>
+                  <Text style={styles.label}>Cartoletas Iniciais</Text>
+                  <TextInput style={styles.input} value={cartoletasIniciais} onChangeText={setCartoletasIniciais} keyboardType="decimal-pad" placeholder="Ex: 100" placeholderTextColor="#64748b" />
+
+                  <Text style={styles.label}>Posição na Liga</Text>
+                  <TextInput style={styles.input} value={posicaoCampo} onChangeText={setPosicaoCampo} keyboardType="number-pad" placeholder="Última posição conhecida" placeholderTextColor="#64748b" />
+
+                  <Text style={styles.label}>Estratégia</Text>
+                  <View style={styles.pickerRow}>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, estrategia === 'auto' && styles.pickerActive]}
+                      onPress={() => setEstrategia('auto')}
+                    >
+                      <Text style={[styles.pickerText, estrategia === 'auto' && styles.pickerTextActive]}>Auto</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, estrategia === 'manual' && styles.pickerActive]}
+                      onPress={() => setEstrategia('manual')}
+                    >
+                      <Text style={[styles.pickerText, estrategia === 'manual' && styles.pickerTextActive]}>Manual</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {estrategia === 'manual' && (
+                    <>
+                      <Text style={styles.label}>Modo</Text>
+                      <View style={styles.pickerRow}>
+                        <TouchableOpacity
+                          style={[styles.pickerItem, modoBot === 'max-pontos' && styles.pickerActive]}
+                          onPress={() => setModoBot('max-pontos')}
+                        >
+                          <Text style={[styles.pickerText, modoBot === 'max-pontos' && styles.pickerTextActive]}>Max Pontos</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.pickerItem, modoBot === 'valorizacao' && styles.pickerActive]}
+                          onPress={() => setModoBot('valorizacao')}
+                        >
+                          <Text style={[styles.pickerText, modoBot === 'valorizacao' && styles.pickerTextActive]}>Valorização</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.label}>Perfil</Text>
+                      <View style={styles.pickerRow}>
+                        <TouchableOpacity
+                          style={[styles.pickerItem, perfilBot === 'neutro' && styles.pickerActive]}
+                          onPress={() => setPerfilBot('neutro')}
+                        >
+                          <Text style={[styles.pickerText, perfilBot === 'neutro' && styles.pickerTextActive]}>Neutro</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.pickerItem, perfilBot === 'agressivo' && styles.pickerActive]}
+                          onPress={() => setPerfilBot('agressivo')}
+                        >
+                          <Text style={[styles.pickerText, perfilBot === 'agressivo' && styles.pickerTextActive]}>Agressivo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.pickerItem, perfilBot === 'conservador' && styles.pickerActive]}
+                          onPress={() => setPerfilBot('conservador')}
+                        >
+                          <Text style={[styles.pickerText, perfilBot === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {modoBot === 'valorizacao' && (
+                        <>
+                          <Text style={styles.label}>Peso da Valorização (opcional)</Text>
+                          <TextInput style={styles.input} value={pesoBot} onChangeText={setPesoBot} keyboardType="decimal-pad" placeholder="Ex: 0.5" placeholderTextColor="#64748b" />
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>Ranking</Text>
+                  <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
+                </>
+              )}
 
               {!editTeamId && (
                 <Text style={styles.hint}>
-                  Total acumulado será calculado automaticamente conforme a modalidade da liga ({modalidade === 'patrimonio' ? 'Patrimônio' : 'Ranking'}).
+                  {isBot
+                    ? 'Patrimônio = orçamento atual do bot. Atualize após cada rodada processada.'
+                    : `Total acumulado será calculado automaticamente conforme a modalidade da liga (${modalidade === 'patrimonio' ? 'Patrimônio' : 'Ranking'}).`
+                  }
                 </Text>
               )}
 
@@ -345,6 +628,150 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleSaveLeague}>
                   <Text style={styles.confirmBtnText}>Salvar</Text>
                 </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={!!gerenciandoBot} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <ScrollView style={styles.modalScroll}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>🤖 {gerenciandoBot?.nome}</Text>
+
+              <View style={styles.botInfoGrid}>
+                <View style={styles.botInfoItem}>
+                  <Text style={styles.botInfoLabel}>Orçamento</Text>
+                  <Text style={styles.botInfoValue}>C$ {gerenciandoBot?.patrimonio.toFixed(2)}</Text>
+                </View>
+                <View style={styles.botInfoItem}>
+                  <Text style={styles.botInfoLabel}>Cartoletas iniciais</Text>
+                  <Text style={styles.botInfoValue}>C$ {gerenciandoBot?.cartoletas_iniciais?.toFixed(2) || '—'}</Text>
+                </View>
+                <View style={styles.botInfoItem}>
+                  <Text style={styles.botInfoLabel}>Pontos</Text>
+                  <Text style={styles.botInfoValue}>{gerenciandoBot?.total_acumulado.toFixed(2)}</Text>
+                </View>
+                <View style={styles.botInfoItem}>
+                  <Text style={styles.botInfoLabel}>Posição</Text>
+                  <Text style={styles.botInfoValue}>{gerenciandoBot?.posicao || '—'}º</Text>
+                </View>
+              </View>
+
+              <Text style={styles.label}>Estratégia</Text>
+              <View style={styles.pickerRow}>
+                <TouchableOpacity
+                  style={[styles.pickerItem, editEstrategia === 'auto' && styles.pickerActive]}
+                  onPress={() => setEditEstrategia('auto')}
+                >
+                  <Text style={[styles.pickerText, editEstrategia === 'auto' && styles.pickerTextActive]}>Auto</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pickerItem, editEstrategia === 'manual' && styles.pickerActive]}
+                  onPress={() => setEditEstrategia('manual')}
+                >
+                  <Text style={[styles.pickerText, editEstrategia === 'manual' && styles.pickerTextActive]}>Manual</Text>
+                </TouchableOpacity>
+              </View>
+
+              {editEstrategia === 'manual' && (
+                <>
+                  <Text style={styles.label}>Modo</Text>
+                  <View style={styles.pickerRow}>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, editModo === 'max-pontos' && styles.pickerActive]}
+                      onPress={() => setEditModo('max-pontos')}
+                    >
+                      <Text style={[styles.pickerText, editModo === 'max-pontos' && styles.pickerTextActive]}>Max Pontos</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, editModo === 'valorizacao' && styles.pickerActive]}
+                      onPress={() => setEditModo('valorizacao')}
+                    >
+                      <Text style={[styles.pickerText, editModo === 'valorizacao' && styles.pickerTextActive]}>Valorização</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={styles.label}>Perfil</Text>
+                  <View style={styles.pickerRow}>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, editPerfil === 'neutro' && styles.pickerActive]}
+                      onPress={() => setEditPerfil('neutro')}
+                    >
+                      <Text style={[styles.pickerText, editPerfil === 'neutro' && styles.pickerTextActive]}>Neutro</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, editPerfil === 'agressivo' && styles.pickerActive]}
+                      onPress={() => setEditPerfil('agressivo')}
+                    >
+                      <Text style={[styles.pickerText, editPerfil === 'agressivo' && styles.pickerTextActive]}>Agressivo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pickerItem, editPerfil === 'conservador' && styles.pickerActive]}
+                      onPress={() => setEditPerfil('conservador')}
+                    >
+                      <Text style={[styles.pickerText, editPerfil === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {editModo === 'valorizacao' && (
+                    <>
+                      <Text style={styles.label}>Peso da Valorização (opcional)</Text>
+                      <TextInput style={styles.input} value={editPeso} onChangeText={setEditPeso} keyboardType="decimal-pad" placeholder="Ex: 0.5" placeholderTextColor="#64748b" />
+                    </>
+                  )}
+                </>
+              )}
+
+              {botLoading && (
+                <ActivityIndicator size="large" color="#22c55e" style={{ marginVertical: 24 }} />
+              )}
+
+              {botResult && (
+                <View style={styles.botResultArea}>
+                  <Text style={styles.botEstrategia}>📋 {botResult.estrategia}</Text>
+                  <View style={styles.botResultRow}>
+                    <Text style={styles.botResultLabel}>Modo:</Text>
+                    <Text style={styles.botResultValue}>{botResult.modo}</Text>
+                  </View>
+                  <View style={styles.botResultRow}>
+                    <Text style={styles.botResultLabel}>Perfil:</Text>
+                    <Text style={styles.botResultValue}>{botResult.perfil}</Text>
+                  </View>
+                  <View style={styles.botResultRow}>
+                    <Text style={styles.botResultLabel}>Formação:</Text>
+                    <Text style={styles.botResultValue}>{botResult.formacao}</Text>
+                  </View>
+                  <View style={styles.botResultRow}>
+                    <Text style={styles.botResultLabel}>Orçamento usado:</Text>
+                    <Text style={styles.botResultValue}>C$ {botResult.orcamento_usado.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.botResultRow}>
+                    <Text style={styles.botResultLabel}>Pontos previstos:</Text>
+                    <Text style={styles.botResultValue}>{botResult.pontos_previstos.toFixed(2)}</Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.modalButtonsGroup}>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={closeGerenciarBot}>
+                    <Text style={styles.cancelBtnText}>Fechar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveBtn} onPress={salvarEstrategiaBot}>
+                    <Text style={styles.saveBtnText}>Salvar</Text>
+                  </TouchableOpacity>
+                </View>
+                {gerenciandoBot && (
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, botLoading && { opacity: 0.5 }]}
+                    onPress={handleEscalarBot}
+                    disabled={botLoading}
+                  >
+                    <Text style={styles.confirmBtnText}>{botLoading ? 'Escalando...' : 'Escalar'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -655,6 +1082,135 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
+  toggle: {
+    width: 48,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#334155',
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#22c55e',
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#f8fafc',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  teamCardTouch: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamNomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  botBadge: {
+    fontSize: 14,
+  },
+  teamActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  botActionBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  botActionBtnText: {
+    fontSize: 18,
+  },
+  lineupActionBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  lineupActionBtnText: {
+    fontSize: 16,
+  },
+  botInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  botInfoItem: {
+    width: '47%',
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    padding: 12,
+  },
+  botInfoLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  botInfoValue: {
+    fontSize: 16,
+    color: '#22c55e',
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  botResultArea: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  botEstrategia: {
+    fontSize: 13,
+    color: '#f8fafc',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  botResultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  botResultLabel: {
+    fontSize: 13,
+    color: '#94a3b8',
+  },
+  botResultValue: {
+    fontSize: 13,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
+  modalButtonsGroup: {
+    marginTop: 24,
+    gap: 12,
+  },
+  saveBtn: {
+    flex: 1,
+    backgroundColor: '#3b82f6',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',

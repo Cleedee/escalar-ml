@@ -49,6 +49,7 @@ export interface Lineup {
   created_at: string;
   params: OtimizarParams;
   response: OtimizarResponse;
+  estrategia?: string;
 }
 
 export interface Team {
@@ -61,6 +62,62 @@ export interface Team {
   ranking: number;
   total_acumulado: number;
   is_user: boolean;
+  is_bot?: boolean;
+  cartoletas_iniciais?: number;
+  posicao?: number;
+  ativo?: boolean;
+  estrategia?: 'auto' | 'manual';
+  modo?: 'max-pontos' | 'valorizacao';
+  perfil?: 'neutro' | 'agressivo' | 'conservador';
+  peso?: number;
+}
+
+export interface BotEscalarRequest {
+  nome: string;
+  cartoletas_iniciais: number;
+  orcamento_atual: number;
+  total_pontos: number;
+  posicao: number;
+  total_participantes: number;
+  rodada_atual: number;
+  rodada_inicio: number;
+  rodada_fim: number;
+  pontos_lider: number;
+  pontos_proximo: number;
+  modalidade: 'patrimonio' | 'pontuacao';
+  modo?: 'max-pontos' | 'valorizacao';
+  perfil?: 'neutro' | 'agressivo' | 'conservador';
+  peso_valorizacao?: number;
+}
+
+export interface BotPlayer {
+  atleta_id: number;
+  apelido: string;
+  clube: string;
+  posicao: string;
+  preco: number;
+  previsto: number;
+  media_num: number;
+  jogos_num: number;
+  role?: 'capitao';
+}
+
+export interface BotReserva {
+  apelido: string;
+  clube: string;
+  atleta_id: number;
+}
+
+export interface BotEscalarResponse {
+  estrategia: string;
+  modo: string;
+  perfil: string;
+  formacao: string;
+  orcamento_usado: number;
+  pontos_previstos: number;
+  players: BotPlayer[];
+  tecnico: BotPlayer;
+  reservas: Record<string, BotReserva>;
 }
 
 export interface League {
