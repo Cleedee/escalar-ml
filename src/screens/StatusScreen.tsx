@@ -9,7 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { MarketStatus, STATUS_MAP } from '../types';
-import { API_BASE, fetchStatus } from '../services/api';
+import { API_BASE } from '../config';
+import { fetchStatus } from '../services/api';
 
 export default function StatusScreen() {
   const [status, setStatus] = useState<MarketStatus | null>(null);

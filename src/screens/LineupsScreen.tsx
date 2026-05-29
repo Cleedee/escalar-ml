@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { Lineup } from '../types';
-import { API_BASE, fetchStatus } from '../services/api';
+import { API_BASE } from '../config';
+import { fetchStatus } from '../services/api';
 import { getLineupsByRodada } from '../services/storage';
 
 export default function LineupsScreen({ navigation }: any) {

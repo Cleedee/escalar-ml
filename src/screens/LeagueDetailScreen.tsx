@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { BotEscalarRequest, BotEscalarResponse, TeamSearchResult, League, Lineup, OtimizarParams, Player, Reserva, Tecnico, Team } from '../types';
-import { fetchTeams, fetchStatus, postBotEscalar } from '../services/api';
+import { fetchTeams, fetchTeamBySlug, fetchStatus, postBotEscalar } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
@@ -169,13 +169,22 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     }, 400);
   };
 
-  const selectTeam = (team: TeamSearchResult) => {
+  const selectTeam = async (team: TeamSearchResult) => {
     setNome(team.nome || '');
     setProprietario(team.nome_proprietario || '');
     setTimeId(String(team.time_id ?? ''));
     setShowTeamSearch(false);
     setTeamQuery('');
     setTeamResults([]);
+
+    if (team.slug) {
+      try {
+        const detail = await fetchTeamBySlug(team.slug);
+        setPatrimonio(String(detail.patrimonio ?? ''));
+      } catch {
+        // silently ignore — user can type patrimonio manually
+      }
+    }
   };
 
   const openGerenciarBot = (bot: Team) => {
