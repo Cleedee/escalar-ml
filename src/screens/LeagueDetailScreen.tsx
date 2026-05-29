@@ -428,14 +428,14 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               </View>
 
               <TouchableOpacity style={styles.cartolaSearchBtn} onPress={() => setShowCartolaSearch(true)}>
-                <Text style={styles.cartolaSearchBtnText}>Buscar no Cartola</Text>
+                <Text style={styles.cartolaSearchBtnText}>Buscar time</Text>
               </TouchableOpacity>
 
               {showCartolaSearch && (
                 <View style={styles.cartolaSearchArea}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Nome do time no Cartola..."
+                    placeholder="Nome do time..."
                     placeholderTextColor="#64748b"
                     value={cartolaQuery}
                     onChangeText={handleCartolaQuery}
@@ -464,9 +464,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               )}
 
               <Text style={styles.label}>Proprietário</Text>
-              <TextInput style={styles.input} value={proprietario} onChangeText={setProprietario} placeholder="Nome do cartoleiro" placeholderTextColor="#64748b" />
+              <TextInput style={styles.input} value={proprietario} onChangeText={setProprietario} placeholder="Nome do proprietário" placeholderTextColor="#64748b" />
 
-              <Text style={styles.label}>Time ID (Cartola FC)</Text>
+              <Text style={styles.label}>Time ID</Text>
               <TextInput style={styles.input} value={timeId} onChangeText={setTimeId} placeholder="Opcional" placeholderTextColor="#64748b" />
 
               <Text style={styles.label}>Patrimônio</Text>

@@ -47,7 +47,7 @@ export default function StatusScreen() {
           style={styles.logoImage}
           resizeMode="contain"
         />
-        <Text style={styles.subtitle}>Status do Cartola FC</Text>
+        <Text style={styles.subtitle}>Status do Mercado</Text>
       </View>
 
       {loading && (
