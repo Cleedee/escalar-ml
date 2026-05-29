@@ -177,16 +177,16 @@ export interface League {
   created_at: string;
 }
 
-export interface CartolaTeamSearchResult {
+export interface TeamSearchResult {
   rodada_time_id: number;
-  nome_cartola: string;
+  nome_proprietario: string;
   slug: string;
   url_escudo_png: string;
   nome: string;
   time_id: string;
 }
 
-export interface CartolaStatus {
+export interface MarketStatus {
   rodada_atual: number;
   status_mercado: number;
   fechamento?: {

@@ -1,7 +1,7 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaStatus, CartolaTeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, MarketStatus, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
-export async function fetchStatus(): Promise<CartolaStatus> {
+export async function fetchStatus(): Promise<MarketStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -52,7 +52,7 @@ export async function postOtimizar(params: OtimizarParams): Promise<OtimizarResp
   return res.json();
 }
 
-export async function fetchCartolaTeams(q: string): Promise<CartolaTeamSearchResult[]> {
+export async function fetchTeams(q: string): Promise<TeamSearchResult[]> {
   const res = await fetch(`${API_BASE}/cartola/times?q=${encodeURIComponent(q)}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

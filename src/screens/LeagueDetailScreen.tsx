@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaTeamSearchResult, League, Lineup, OtimizarParams, Player, Reserva, Tecnico, Team } from '../types';
-import { fetchCartolaTeams, fetchStatus, postBotEscalar } from '../services/api';
+import { BotEscalarRequest, BotEscalarResponse, TeamSearchResult, League, Lineup, OtimizarParams, Player, Reserva, Tecnico, Team } from '../types';
+import { fetchTeams, fetchStatus, postBotEscalar } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
@@ -32,11 +32,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [leagueModalidade, setLeagueModalidade] = useState(league.modalidade);
   const [leagueInicial, setLeagueInicial] = useState(league.rodada_inicial);
   const [leagueFinal, setLeagueFinal] = useState(league.rodada_final);
-  const [showCartolaSearch, setShowCartolaSearch] = useState(false);
-  const [cartolaQuery, setCartolaQuery] = useState('');
-  const [cartolaResults, setCartolaResults] = useState<CartolaTeamSearchResult[]>([]);
-  const [cartolaLoading, setCartolaLoading] = useState(false);
-  const cartolaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showTeamSearch, setShowTeamSearch] = useState(false);
+  const [teamQuery, setTeamQuery] = useState('');
+  const [teamResults, setTeamResults] = useState<TeamSearchResult[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const teamTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isBot, setIsBot] = useState(false);
   const [cartoletasIniciais, setCartoletasIniciais] = useState('');
   const [posicaoCampo, setPosicaoCampo] = useState('');
@@ -153,29 +153,29 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setShowLeagueForm(false);
   };
 
-  const handleCartolaQuery = (text: string) => {
-    setCartolaQuery(text);
-    if (cartolaTimer.current) clearTimeout(cartolaTimer.current);
+  const handleTeamQuery = (text: string) => {
+    setTeamQuery(text);
+    if (teamTimer.current) clearTimeout(teamTimer.current);
     if (!text.trim()) {
-      setCartolaResults([]);
+      setTeamResults([]);
       return;
     }
-    cartolaTimer.current = setTimeout(() => {
-      setCartolaLoading(true);
-      fetchCartolaTeams(text.trim())
-        .then(setCartolaResults)
-        .catch(() => setCartolaResults([]))
-        .finally(() => setCartolaLoading(false));
+    teamTimer.current = setTimeout(() => {
+      setTeamLoading(true);
+      fetchTeams(text.trim())
+        .then(setTeamResults)
+        .catch(() => setTeamResults([]))
+        .finally(() => setTeamLoading(false));
     }, 400);
   };
 
-  const selectCartolaTeam = (team: CartolaTeamSearchResult) => {
+  const selectTeam = (team: TeamSearchResult) => {
     setNome(team.nome || '');
-    setProprietario(team.nome_cartola || '');
+    setProprietario(team.nome_proprietario || '');
     setTimeId(String(team.time_id ?? ''));
-    setShowCartolaSearch(false);
-    setCartolaQuery('');
-    setCartolaResults([]);
+    setShowTeamSearch(false);
+    setTeamQuery('');
+    setTeamResults([]);
   };
 
   const openGerenciarBot = (bot: Team) => {
@@ -427,38 +427,38 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.cartolaSearchBtn} onPress={() => setShowCartolaSearch(true)}>
-                <Text style={styles.cartolaSearchBtnText}>Buscar time</Text>
+              <TouchableOpacity style={styles.teamSearchBtn} onPress={() => setShowTeamSearch(true)}>
+                <Text style={styles.teamSearchBtnText}>Buscar time</Text>
               </TouchableOpacity>
 
-              {showCartolaSearch && (
-                <View style={styles.cartolaSearchArea}>
+              {showTeamSearch && (
+                <View style={styles.teamSearchArea}>
                   <TextInput
                     style={styles.input}
                     placeholder="Nome do time..."
                     placeholderTextColor="#64748b"
-                    value={cartolaQuery}
-                    onChangeText={handleCartolaQuery}
+                    value={teamQuery}
+                    onChangeText={handleTeamQuery}
                     autoFocus
                   />
-                  {cartolaLoading ? (
+                  {teamLoading ? (
                     <ActivityIndicator size="small" color="#22c55e" style={{ marginVertical: 12 }} />
-                  ) : cartolaResults.length > 0 ? (
-                    <View style={styles.cartolaResults}>
-                      {cartolaResults.map((item) => (
+                  ) : teamResults.length > 0 ? (
+                    <View style={styles.teamResults}>
+                      {teamResults.map((item) => (
                         <TouchableOpacity
                           key={item.time_id}
-                          style={styles.cartolaResultItem}
-                          onPress={() => selectCartolaTeam(item)}
+                          style={styles.teamResultItem}
+                          onPress={() => selectTeam(item)}
                         >
-                          <Text style={styles.cartolaResultNome}>{item.nome_cartola}</Text>
-                          <Text style={styles.cartolaResultProp}>{item.nome}</Text>
-                          <Text style={styles.cartolaResultId}>ID: {item.time_id}</Text>
+                          <Text style={styles.teamResultNome}>{item.nome_proprietario}</Text>
+                          <Text style={styles.teamResultProp}>{item.nome}</Text>
+                          <Text style={styles.teamResultId}>ID: {item.time_id}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
-                  ) : cartolaQuery.trim() ? (
-                    <Text style={styles.cartolaEmpty}>Nenhum time encontrado</Text>
+                  ) : teamQuery.trim() ? (
+                    <Text style={styles.teamEmpty}>Nenhum time encontrado</Text>
                   ) : null}
                 </View>
               )}
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontStyle: 'italic',
   },
-  cartolaSearchBtn: {
+  teamSearchBtn: {
     borderWidth: 1,
     borderColor: '#3b82f6',
     borderRadius: 8,
@@ -1017,42 +1017,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  cartolaSearchBtnText: {
+  teamSearchBtnText: {
     color: '#3b82f6',
     fontSize: 13,
     fontWeight: '600',
   },
-  cartolaSearchArea: {
+  teamSearchArea: {
     marginTop: 8,
     backgroundColor: '#0f172a',
     borderRadius: 10,
     padding: 12,
   },
-  cartolaResults: {
+  teamResults: {
     marginTop: 8,
   },
-  cartolaResultItem: {
+  teamResultItem: {
     backgroundColor: '#1e293b',
     borderRadius: 8,
     padding: 12,
     marginBottom: 6,
   },
-  cartolaResultNome: {
+  teamResultNome: {
     fontSize: 15,
     fontWeight: '600',
     color: '#f8fafc',
   },
-  cartolaResultProp: {
+  teamResultProp: {
     fontSize: 12,
     color: '#94a3b8',
     marginTop: 1,
   },
-  cartolaResultId: {
+  teamResultId: {
     fontSize: 11,
     color: '#64748b',
     marginTop: 1,
   },
-  cartolaEmpty: {
+  teamEmpty: {
     color: '#64748b',
     fontSize: 13,
     textAlign: 'center',

@@ -8,11 +8,11 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { CartolaStatus, STATUS_MAP } from '../types';
+import { MarketStatus, STATUS_MAP } from '../types';
 import { API_BASE, fetchStatus } from '../services/api';
 
 export default function StatusScreen() {
-  const [status, setStatus] = useState<CartolaStatus | null>(null);
+  const [status, setStatus] = useState<MarketStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
