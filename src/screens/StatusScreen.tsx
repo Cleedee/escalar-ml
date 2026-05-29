@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
@@ -41,7 +42,11 @@ export default function StatusScreen() {
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <Text style={styles.logo}>EscalarML</Text>
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>Status do Cartola FC</Text>
       </View>
 
@@ -127,11 +132,9 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     alignItems: 'center',
   },
-  logo: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-    letterSpacing: 1,
+  logoImage: {
+    width: 200,
+    height: 80,
   },
   subtitle: {
     fontSize: 13,

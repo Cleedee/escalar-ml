@@ -1,8 +1,5 @@
+import { API_BASE } from '../config';
 import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaStatus, CartolaTeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
-
-/* export const API_BASE = 'http://192.168.18.9:8088'; */
-/* export const API_BASE = 'http://10.22.196.40:8088'; */
-export const API_BASE = 'https://escalar-no-cartola.onrender.com';
 
 export async function fetchStatus(): Promise<CartolaStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
