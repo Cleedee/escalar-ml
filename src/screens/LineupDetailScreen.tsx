@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Player } from '../types';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Player, Reserva } from '../types';
 import { deleteLineup } from '../services/storage';
 import { fetchPontuados } from '../services/api';
 
@@ -23,6 +24,21 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     setShowDeleteModal(false);
     await deleteLineup(lineup.id);
     navigation.goBack();
+  };
+
+  const handleExportJson = async () => {
+    const payload = {
+      ...response,
+      params: lineup.params,
+      nome: lineup.nome,
+      rodada: lineup.rodada,
+    };
+    try {
+      await Clipboard.setStringAsync(JSON.stringify(payload, null, 2));
+      Alert.alert('Exportado', 'JSON copiado para a área de transferência');
+    } catch {
+      Alert.alert('Erro', 'Não foi possível exportar o JSON');
+    }
   };
 
   useEffect(() => {
@@ -63,35 +79,82 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </Text>
         <Text style={styles.resultOrcamento}>
           C$ {response.orcamento_usado.toFixed(2)} usados
+          {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}C$ ${response.valorizacao_total.toFixed(2)}` : ''}
         </Text>
       </View>
+
+      {lineup.params && (
+        <View style={styles.paramsBox}>
+          <Text style={styles.paramsTitle}>Parâmetros da otimização</Text>
+          <View style={styles.paramsRow}>
+            <Text style={styles.paramsLabel}>Foco</Text>
+            <Text style={styles.paramsValue}>
+              {lineup.params.foco == null ? '—' : lineup.params.foco === 1.0 ? 'Só Pontuação' : lineup.params.foco >= 0.8 ? '↑ Pontuação' : lineup.params.foco === 0.7 ? 'Valoriz. Leve' : lineup.params.foco === 0.5 ? 'Equilibrado' : lineup.params.foco === 0.3 ? '↑ Valorização' : lineup.params.foco === 0.0 ? 'Só Valorização' : lineup.params.foco.toFixed(1)}
+            </Text>
+          </View>
+          <View style={styles.paramsRow}>
+            <Text style={styles.paramsLabel}>Perfil</Text>
+            <Text style={styles.paramsValue}>
+              {lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}
+            </Text>
+          </View>
+          {lineup.estrategia && (
+            <View style={styles.paramsRow}>
+              <Text style={styles.paramsLabel}>Estratégia</Text>
+              <Text style={[styles.paramsValue, { flex: 1, textAlign: 'right' }]}>{lineup.estrategia}</Text>
+            </View>
+          )}
+          {response.valorizacao_total != null && (
+            <View style={styles.paramsRow}>
+              <Text style={styles.paramsLabel}>Valorização proj.</Text>
+              <Text style={[styles.paramsValue, { color: '#3b82f6' }]}>
+                {response.valorizacao_total >= 0 ? '+' : ''}C$ {response.valorizacao_total.toFixed(2)}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <Text style={styles.sectionTitle}>Titulares</Text>
       {response.players.map((p: Player) => {
         const real = getActual(p.atleta_id);
         return (
           <View key={p.atleta_id} style={styles.playerRow}>
-            <View style={styles.playerLeft}>
-              <Text style={styles.playerPos}>
-                {posicoes[p.posicao] || p.posicao}
-              </Text>
-              <Text style={styles.playerName}>
-                {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
-              </Text>
+            <View style={styles.playerTop}>
+              <View>
+                <Text style={styles.playerPos}>
+                  {posicoes[p.posicao] || p.posicao}
+                </Text>
+                <Text style={styles.playerName}>
+                  {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.detailBtn}
+                onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}
+              >
+                <Text style={styles.detailBtnText}>i</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.playerRight}>
-              <Text style={styles.playerClub}>{p.clube}</Text>
-              <Text style={styles.playerPrice}>
-                C$ {p.preco.toFixed(2)} · {p.previsto.toFixed(1)}
-                {real !== null ? ` (${real.toFixed(1)})` : ''} pts
-              </Text>
+            <View style={styles.playerStats}>
+              <View style={styles.playerStat}>
+                <Text style={styles.playerStatValue}>C$ {p.preco.toFixed(2)}</Text>
+                <Text style={styles.playerStatLabel}>Preço</Text>
+              </View>
+              <View style={styles.playerStat}>
+                <Text style={styles.playerStatValue}>
+                  {p.previsto.toFixed(1)}
+                  {real !== null ? ` (${real.toFixed(1)})` : ''}
+                </Text>
+                <Text style={styles.playerStatLabel}>Projeção</Text>
+              </View>
+              <View style={styles.playerStat}>
+                <Text style={[styles.playerStatValue, { color: '#3b82f6' }]}>
+                  {p.preco_projetado != null ? `${(p.preco_projetado - p.preco) >= 0 ? '+' : ''}C$ ${(p.preco_projetado - p.preco).toFixed(2)}` : '—'}
+                </Text>
+                <Text style={styles.playerStatLabel}>Valorização</Text>
+              </View>
             </View>
-            <TouchableOpacity
-              style={styles.detailBtn}
-              onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}
-            >
-              <Text style={styles.detailBtnText}>i</Text>
-            </TouchableOpacity>
           </View>
         );
       })}
@@ -111,7 +174,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 <Text style={styles.playerClub}>
                   C$ {response.tecnico.preco.toFixed(2)}
                 </Text>
-                <Text style={styles.playerPrice}>
+                <Text style={styles.tecnicoPts}>
                   {response.tecnico.previsto.toFixed(1)}
                   {real !== null ? ` (${real.toFixed(1)})` : ''} pts
                 </Text>
@@ -139,17 +202,20 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       {Object.keys(response.reservas).length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Reservas</Text>
-          {Object.entries(response.reservas as Record<string, { apelido: string; luxo: boolean }>).map(([pos, r]) => (
+          {Object.entries(response.reservas).map(([pos, r]) => {
+            const reserva = r as Reserva;
+            return (
             <View key={pos} style={styles.reservaRow}>
               <Text style={styles.reservaPos}>
                 {posicoes[pos] || pos}
               </Text>
               <Text style={styles.reservaName}>
-                {r.apelido}
-                {r.luxo ? ' ⭐' : ''}
+                {reserva.apelido}
+                {reserva.luxo ? ' ⭐' : ''}
               </Text>
             </View>
-          ))}
+            );
+          })}
         </>
       )}
 
@@ -164,6 +230,13 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           ))}
         </>
       )}
+
+      <TouchableOpacity
+        style={styles.exportBtn}
+        onPress={handleExportJson}
+      >
+        <Text style={styles.exportBtnText}>Exportar JSON</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.backBtn}
@@ -220,6 +293,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  paramsBox: {
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  paramsTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  paramsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  paramsLabel: {
+    fontSize: 13,
+    color: '#94a3b8',
+  },
+  paramsValue: {
+    fontSize: 13,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
   resultTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -268,8 +371,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   playerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     backgroundColor: '#1e293b',
     borderRadius: 8,
     padding: 12,
@@ -296,7 +397,12 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginTop: 2,
   },
-  playerLeft: {},
+  playerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   playerPos: {
     fontSize: 11,
     color: '#64748b',
@@ -306,6 +412,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#f8fafc',
     fontWeight: '600',
+    marginTop: 1,
+  },
+  playerStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    paddingTop: 10,
+  },
+  playerStat: {
+    alignItems: 'center',
+  },
+  playerStatValue: {
+    fontSize: 14,
+    color: '#22c55e',
+    fontWeight: '700',
+  },
+  playerStatLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
   playerRight: {
     alignItems: 'flex-end',
@@ -314,7 +442,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94a3b8',
   },
-  playerPrice: {
+  tecnicoPts: {
     fontSize: 12,
     color: '#94a3b8',
     marginTop: 2,
@@ -385,6 +513,19 @@ const styles = StyleSheet.create({
   },
   backBtnText: {
     color: '#94a3b8',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  exportBtn: {
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  exportBtnText: {
+    color: '#3b82f6',
     fontSize: 15,
     fontWeight: '600',
   },

@@ -41,17 +41,15 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [cartoletasIniciais, setCartoletasIniciais] = useState('');
   const [posicaoCampo, setPosicaoCampo] = useState('');
   const [estrategia, setEstrategia] = useState<'auto' | 'manual'>('auto');
-  const [modoBot, setModoBot] = useState<'max-pontos' | 'valorizacao'>('max-pontos');
+  const [focoBot, setFocoBot] = useState(1.0);
   const [perfilBot, setPerfilBot] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
-  const [pesoBot, setPesoBot] = useState('');
   const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
   const [botResult, setBotResult] = useState<BotEscalarResponse | null>(null);
   const [botLoading, setBotLoading] = useState(false);
   const [rodadaAtual, setRodadaAtual] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
-  const [editModo, setEditModo] = useState<'max-pontos' | 'valorizacao'>('max-pontos');
+  const [editFoco, setEditFoco] = useState(1.0);
   const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
-  const [editPeso, setEditPeso] = useState('');
   const [lineups, setLineups] = useState<Lineup[]>([]);
 
   useFocusEffect(
@@ -79,9 +77,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setCartoletasIniciais('');
     setPosicaoCampo('');
     setEstrategia('auto');
-    setModoBot('max-pontos');
+    setFocoBot(1.0);
     setPerfilBot('neutro');
-    setPesoBot('');
     setShowTeamForm(true);
   };
 
@@ -96,9 +93,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setCartoletasIniciais(team.cartoletas_iniciais ? String(team.cartoletas_iniciais) : '');
     setPosicaoCampo(team.posicao ? String(team.posicao) : '');
     setEstrategia(team.estrategia || 'auto');
-    setModoBot(team.modo || 'max-pontos');
+    setFocoBot(team.foco ?? 1.0);
     setPerfilBot(team.perfil || 'neutro');
-    setPesoBot(team.peso ? String(team.peso) : '');
     setShowTeamForm(true);
   };
 
@@ -122,9 +118,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       posicao: isBot ? (parseInt(posicaoCampo) || undefined) : undefined,
       ativo: isBot ? true : undefined,
       estrategia: isBot ? estrategia : undefined,
-      modo: isBot ? modoBot : undefined,
+      foco: isBot ? focoBot : undefined,
       perfil: isBot ? perfilBot : undefined,
-      peso: isBot ? (parseFloat(pesoBot) || undefined) : undefined,
     }; 
     const times = editTeamId
       ? league.times.map((t) => (t.id === editTeamId ? team : t))
@@ -186,9 +181,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const openGerenciarBot = (bot: Team) => {
     setGerenciandoBot(bot);
     setEditEstrategia(bot.estrategia || 'auto');
-    setEditModo(bot.modo || 'max-pontos');
+    setEditFoco(bot.foco ?? 1.0);
     setEditPerfil(bot.perfil || 'neutro');
-    setEditPeso(bot.peso ? String(bot.peso) : '');
     setBotResult(null);
   };
 
@@ -197,9 +191,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     const updated: Team = {
       ...gerenciandoBot,
       estrategia: editEstrategia,
-      modo: editModo,
+      foco: editFoco,
       perfil: editPerfil,
-      peso: parseFloat(editPeso) || undefined,
     };
     setLeague({
       ...league,
@@ -221,7 +214,10 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       preco: p.preco,
       previsto: p.previsto,
       clube: p.clube,
-      role: p.role,
+      potential_valorizacao: p.potential_valorizacao,
+      preco_projetado: p.preco_projetado,
+      variacao_num: p.variacao_num,
+      role: p.role === 'capitao' ? 'capitao' : undefined,
     });
     const mapTecnico = (p: BotEscalarResponse['tecnico']): Tecnico => ({
       atleta_id: p.atleta_id,
@@ -229,18 +225,34 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       clube: p.clube,
       preco: p.preco,
       previsto: p.previsto,
+      potential_valorizacao: p.potential_valorizacao,
+      preco_projetado: p.preco_projetado,
     });
     const reservas: Record<string, Reserva> = {};
     for (const [pos, r] of Object.entries(botRes.reservas)) {
-      reservas[pos] = { apelido: r.apelido, luxo: false };
+      reservas[pos] = {
+        atleta_id: r.atleta_id,
+        apelido: r.apelido,
+        clube: r.clube,
+        posicao: r.posicao,
+        preco: r.preco,
+        previsto: r.previsto,
+        media_num: r.media_num,
+        jogos_num: r.jogos_num,
+        variacao_num: r.variacao_num,
+        potential_valorizacao: r.potential_valorizacao,
+        preco_projetado: r.preco_projetado,
+        tendencia: r.tendencia,
+        eficiencia: r.eficiencia,
+        luxo: r.luxo || false,
+      };
     }
     return {
       params: {
         orcamento: bot.patrimonio,
         formacao: botRes.formacao,
         perfil: editPerfil,
-        modo: editModo,
-        peso_valorizacao: editPeso ? parseFloat(editPeso) : undefined,
+        foco: editFoco,
         incluir_duvidosos: false,
         reserva_luxo: true,
       },
@@ -251,7 +263,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         players: botRes.players.map(mapPlayer),
         tecnico: mapTecnico(botRes.tecnico),
         reservas,
-        comparacao: [],
+        comparacao: botRes.comparacao || [],
+        valorizacao_total: botRes.valorizacao_total,
       },
     };
   }
@@ -266,7 +279,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       const proximo = sorted.find((t) => t.total_acumulado > bot.total_acumulado && t.id !== bot.id);
       const params: BotEscalarRequest = {
         nome: bot.nome,
-        cartoletas_iniciais: bot.cartoletas_iniciais || bot.patrimonio,
         orcamento_atual: bot.patrimonio,
         total_pontos: bot.total_acumulado,
         posicao: bot.posicao || league.times.length,
@@ -277,12 +289,10 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         pontos_lider: lider?.total_acumulado || 0,
         pontos_proximo: proximo ? proximo.total_acumulado - bot.total_acumulado : 0,
         modalidade: league.modalidade,
+        estrategia: editEstrategia === 'manual'
+          ? { perfil: editPerfil, foco: editFoco }
+          : 'auto',
       };
-      if (editEstrategia === 'manual') {
-        params.modo = editModo;
-        params.perfil = editPerfil;
-        if (editPeso) params.peso_valorizacao = parseFloat(editPeso);
-      }
       const result = await postBotEscalar(params);
       setBotResult(result);
 
@@ -488,20 +498,22 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
                   {estrategia === 'manual' && (
                     <>
-                      <Text style={styles.label}>Modo</Text>
+                      <Text style={styles.label}>Foco</Text>
+                      <Text style={styles.focoHint}>
+                        {focoBot === 1.0 ? 'Só Pontuação' : focoBot >= 0.8 ? '↑ Pontuação' : focoBot === 0.7 ? 'Valoriz. Leve' : focoBot === 0.5 ? 'Equilibrado' : focoBot === 0.3 ? '↑ Valorização' : focoBot === 0.0 ? 'Só Valorização' : focoBot.toFixed(1)}
+                      </Text>
                       <View style={styles.pickerRow}>
-                        <TouchableOpacity
-                          style={[styles.pickerItem, modoBot === 'max-pontos' && styles.pickerActive]}
-                          onPress={() => setModoBot('max-pontos')}
-                        >
-                          <Text style={[styles.pickerText, modoBot === 'max-pontos' && styles.pickerTextActive]}>Max Pontos</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.pickerItem, modoBot === 'valorizacao' && styles.pickerActive]}
-                          onPress={() => setModoBot('valorizacao')}
-                        >
-                          <Text style={[styles.pickerText, modoBot === 'valorizacao' && styles.pickerTextActive]}>Valorização</Text>
-                        </TouchableOpacity>
+                        {[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map((v) => (
+                          <TouchableOpacity
+                            key={v}
+                            style={[styles.pesoItem, focoBot === v && styles.pesoActive]}
+                            onPress={() => setFocoBot(v)}
+                          >
+                            <Text style={[styles.pickerTextSm, focoBot === v && styles.pickersmTextActive]}>
+                              {v.toFixed(1)}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
 
                       <Text style={styles.label}>Perfil</Text>
@@ -525,13 +537,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                           <Text style={[styles.pickerText, perfilBot === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
                         </TouchableOpacity>
                       </View>
-
-                      {modoBot === 'valorizacao' && (
-                        <>
-                          <Text style={styles.label}>Peso da Valorização (opcional)</Text>
-                          <TextInput style={styles.input} value={pesoBot} onChangeText={setPesoBot} keyboardType="decimal-pad" placeholder="Ex: 0.5" placeholderTextColor="#64748b" />
-                        </>
-                      )}
                     </>
                   )}
                 </>
@@ -677,20 +682,22 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
               {editEstrategia === 'manual' && (
                 <>
-                  <Text style={styles.label}>Modo</Text>
+                  <Text style={styles.label}>Foco</Text>
+                  <Text style={styles.focoHint}>
+                    {editFoco === 1.0 ? 'Só Pontuação' : editFoco >= 0.8 ? '↑ Pontuação' : editFoco === 0.7 ? 'Valoriz. Leve' : editFoco === 0.5 ? 'Equilibrado' : editFoco === 0.3 ? '↑ Valorização' : editFoco === 0.0 ? 'Só Valorização' : editFoco.toFixed(1)}
+                  </Text>
                   <View style={styles.pickerRow}>
-                    <TouchableOpacity
-                      style={[styles.pickerItem, editModo === 'max-pontos' && styles.pickerActive]}
-                      onPress={() => setEditModo('max-pontos')}
-                    >
-                      <Text style={[styles.pickerText, editModo === 'max-pontos' && styles.pickerTextActive]}>Max Pontos</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.pickerItem, editModo === 'valorizacao' && styles.pickerActive]}
-                      onPress={() => setEditModo('valorizacao')}
-                    >
-                      <Text style={[styles.pickerText, editModo === 'valorizacao' && styles.pickerTextActive]}>Valorização</Text>
-                    </TouchableOpacity>
+                    {[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map((v) => (
+                      <TouchableOpacity
+                        key={v}
+                        style={[styles.pesoItem, editFoco === v && styles.pesoActive]}
+                        onPress={() => setEditFoco(v)}
+                      >
+                        <Text style={[styles.pickerTextSm, editFoco === v && styles.pickersmTextActive]}>
+                          {v.toFixed(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
 
                   <Text style={styles.label}>Perfil</Text>
@@ -714,13 +721,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                       <Text style={[styles.pickerText, editPerfil === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
                     </TouchableOpacity>
                   </View>
-
-                  {editModo === 'valorizacao' && (
-                    <>
-                      <Text style={styles.label}>Peso da Valorização (opcional)</Text>
-                      <TextInput style={styles.input} value={editPeso} onChangeText={setEditPeso} keyboardType="decimal-pad" placeholder="Ex: 0.5" placeholderTextColor="#64748b" />
-                    </>
-                  )}
                 </>
               )}
 
@@ -732,8 +732,10 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 <View style={styles.botResultArea}>
                   <Text style={styles.botEstrategia}>📋 {botResult.estrategia}</Text>
                   <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Modo:</Text>
-                    <Text style={styles.botResultValue}>{botResult.modo}</Text>
+                    <Text style={styles.botResultLabel}>Foco:</Text>
+                    <Text style={styles.botResultValue}>
+                      {editFoco.toFixed(1)} ({editFoco === 1.0 ? 'Só Pontuação' : editFoco === 0.0 ? 'Só Valorização' : editFoco >= 0.8 ? '↑ Pontuação' : editFoco === 0.7 ? 'Valoriz. Leve' : editFoco === 0.5 ? 'Equilibrado' : editFoco === 0.3 ? '↑ Valorização' : ''})
+                    </Text>
                   </View>
                   <View style={styles.botResultRow}>
                     <Text style={styles.botResultLabel}>Perfil:</Text>
@@ -1214,5 +1216,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  pickersmTextActive: {
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+  focoHint: {
+    fontSize: 12,
+    color: '#3b82f6',
+    marginBottom: 6,
+    fontStyle: 'italic',
+  },
+  pesoItem: {
+    width: 52,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+    backgroundColor: '#1e293b',
+  },
+  pesoActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: 'rgba(59,130,246,0.15)',
   },
 });

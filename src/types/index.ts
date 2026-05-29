@@ -2,10 +2,12 @@ export interface OtimizarParams {
   orcamento: number;
   formacao: string;
   perfil: 'neutro' | 'agressivo' | 'conservador';
-  modo: 'max-pontos' | 'valorizacao';
-  peso_valorizacao?: number;
+  foco: number;
   incluir_duvidosos: boolean;
   reserva_luxo: boolean;
+  forcar?: boolean;
+  excluir?: number[];
+  obrigar?: number[];
 }
 
 export interface Player {
@@ -16,10 +18,29 @@ export interface Player {
   previsto: number;
   clube: string;
   role?: 'capitao';
+  potential_valorizacao?: number;
+  preco_projetado?: number;
+  variacao_num?: number;
+  media_num?: number;
+  jogos_num?: number;
+  eficiencia?: number;
+  tendencia?: string;
 }
 
 export interface Reserva {
+  atleta_id: number;
   apelido: string;
+  clube: string;
+  posicao: string;
+  preco: number;
+  previsto: number;
+  media_num: number;
+  jogos_num: number;
+  variacao_num: number;
+  potential_valorizacao: number;
+  preco_projetado: number;
+  tendencia: string;
+  eficiencia: number;
   luxo: boolean;
 }
 
@@ -29,6 +50,12 @@ export interface Tecnico {
   atleta_id: number;
   preco: number;
   previsto: number;
+  potential_valorizacao?: number;
+  preco_projetado?: number;
+  media_num?: number;
+  jogos_num?: number;
+  eficiencia?: number;
+  tendencia?: string;
 }
 
 export interface OtimizarResponse {
@@ -38,7 +65,12 @@ export interface OtimizarResponse {
   players: Player[];
   tecnico: Tecnico;
   reservas: Record<string, Reserva>;
-  comparacao: Array<{ formacao: string; pontos_previstos: number }>;
+  comparacao: Array<{ formacao: string; pontos_previstos: number; orcamento_usado?: number }>;
+  valorizacao_total?: number;
+  estrategia?: string;
+  foco?: number;
+  perfil?: string;
+  rodada?: number;
 }
 
 export interface Lineup {
@@ -67,14 +99,12 @@ export interface Team {
   posicao?: number;
   ativo?: boolean;
   estrategia?: 'auto' | 'manual';
-  modo?: 'max-pontos' | 'valorizacao';
+  foco?: number;
   perfil?: 'neutro' | 'agressivo' | 'conservador';
-  peso?: number;
 }
 
 export interface BotEscalarRequest {
   nome: string;
-  cartoletas_iniciais: number;
   orcamento_atual: number;
   total_pontos: number;
   posicao: number;
@@ -85,9 +115,7 @@ export interface BotEscalarRequest {
   pontos_lider: number;
   pontos_proximo: number;
   modalidade: 'patrimonio' | 'pontuacao';
-  modo?: 'max-pontos' | 'valorizacao';
-  perfil?: 'neutro' | 'agressivo' | 'conservador';
-  peso_valorizacao?: number;
+  estrategia: 'auto' | { perfil: 'neutro' | 'agressivo' | 'conservador'; foco: number };
 }
 
 export interface BotPlayer {
@@ -99,25 +127,44 @@ export interface BotPlayer {
   previsto: number;
   media_num: number;
   jogos_num: number;
+  variacao_num: number;
+  potential_valorizacao: number;
+  preco_projetado: number;
+  tendencia: string;
+  eficiencia: number;
   role?: 'capitao';
 }
 
 export interface BotReserva {
+  atleta_id: number;
   apelido: string;
   clube: string;
-  atleta_id: number;
+  posicao: string;
+  preco: number;
+  previsto: number;
+  media_num: number;
+  jogos_num: number;
+  variacao_num: number;
+  potential_valorizacao: number;
+  preco_projetado: number;
+  tendencia: string;
+  eficiencia: number;
+  luxo: boolean;
 }
 
 export interface BotEscalarResponse {
   estrategia: string;
-  modo: string;
+  foco: number;
   perfil: string;
   formacao: string;
   orcamento_usado: number;
   pontos_previstos: number;
+  valorizacao_total: number;
   players: BotPlayer[];
   tecnico: BotPlayer;
   reservas: Record<string, BotReserva>;
+  comparacao: Array<{ formacao: string; pontos_previstos: number; orcamento_usado?: number }>;
+  rodada?: number;
 }
 
 export interface League {

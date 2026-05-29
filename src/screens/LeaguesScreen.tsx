@@ -19,6 +19,9 @@ const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 export default function LeaguesScreen({ navigation }: any) {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showCopy, setShowCopy] = useState(false);
+  const [copiarOrigem, setCopiarOrigem] = useState<League | null>(null);
+  const [copiaNome, setCopiaNome] = useState('');
   const [nome, setNome] = useState('');
   const [modalidade, setModalidade] = useState<'patrimonio' | 'pontuacao'>('pontuacao');
   const [rodadaInicial, setRodadaInicial] = useState(1);
@@ -61,6 +64,33 @@ export default function LeaguesScreen({ navigation }: any) {
     deleteLeague(id).then(() => getLeagues().then(setLeagues));
   };
 
+  const openCopy = (league: League) => {
+    setCopiarOrigem(league);
+    setCopiaNome(`${league.nome} (cópia)`);
+    setShowCopy(true);
+  };
+
+  const handleCopy = async () => {
+    if (!copiarOrigem || !copiaNome.trim()) return;
+    const league: League = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      nome: copiaNome.trim(),
+      rodada_inicial: copiarOrigem.rodada_inicial,
+      rodada_final: copiarOrigem.rodada_final,
+      modalidade: copiarOrigem.modalidade,
+      times: copiarOrigem.times.map((t) => ({
+        ...t,
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      })),
+      created_at: new Date().toISOString(),
+    };
+    await saveLeague(league);
+    setCopiaNome('');
+    setShowCopy(false);
+    setCopiarOrigem(null);
+    setLeagues(await getLeagues());
+  };
+
   const openForm = () => {
     setRodadaInicial(rodadaAtual);
     setRodadaFinal(rodadaAtual);
@@ -97,12 +127,14 @@ export default function LeaguesScreen({ navigation }: any) {
             <Text style={styles.cardTimes}>
               {item.times.length} time{item.times.length !== 1 ? 's' : ''}
             </Text>
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDelete(item.id)}
-            >
-              <Text style={styles.deleteBtnText}>Excluir</Text>
-            </TouchableOpacity>
+            <View style={styles.cardActions}>
+              <TouchableOpacity onPress={() => openCopy(item)}>
+                <Text style={styles.copyBtnText}>Copiar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                <Text style={styles.deleteBtnText}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         )}
       />
@@ -195,6 +227,37 @@ export default function LeaguesScreen({ navigation }: any) {
           </ScrollView>
         </View>
       </Modal>
+
+      <Modal visible={showCopy} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Copiar Liga</Text>
+
+            <Text style={styles.label}>Nome da nova liga</Text>
+            <TextInput
+              style={styles.input}
+              value={copiaNome}
+              onChangeText={setCopiaNome}
+              placeholderTextColor="#64748b"
+            />
+
+            {copiarOrigem && (
+              <Text style={styles.hint}>
+                Serão copiados {copiarOrigem.times.length} time{copiarOrigem.times.length !== 1 ? 's' : ''}, as rodadas e a modalidade. As escalações não serão copiadas.
+              </Text>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowCopy(false); setCopiarOrigem(null); }}>
+                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmBtn} onPress={handleCopy}>
+                <Text style={styles.confirmBtnText}>Copiar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -259,9 +322,16 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 2,
   },
-  deleteBtn: {
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
     marginTop: 8,
-    alignSelf: 'flex-end',
+  },
+  copyBtnText: {
+    color: '#3b82f6',
+    fontSize: 13,
+    fontWeight: '600',
   },
   deleteBtnText: {
     color: '#ef4444',

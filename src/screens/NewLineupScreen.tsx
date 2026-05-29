@@ -12,7 +12,17 @@ import {
 } from 'react-native';
 import { FORMACOES, Lineup, OtimizarParams, Player, Tecnico } from '../types';
 
-const PESOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+
+function labelFoco(v: number): string {
+  if (v === 1.0) return 'Só Pontuação';
+  if (v >= 0.8) return '↑ Pontuação';
+  if (v === 0.7) return 'Valoriz. Leve';
+  if (v === 0.5) return 'Equilibrado';
+  if (v === 0.3) return '↑ Valorização';
+  if (v === 0.0) return 'Só Valorização';
+  return v.toFixed(1);
+}
 import { fetchPontuados, postOtimizar } from '../services/api';
 import { saveLineup } from '../services/storage';
 
@@ -23,8 +33,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [orcamento, setOrcamento] = useState('100');
   const [formacao, setFormacao] = useState('auto');
   const [perfil, setPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
-  const [modo, setModo] = useState<'max-pontos' | 'valorizacao'>('max-pontos');
-  const [pesoValorizacao, setPesoValorizacao] = useState(0.5);
+  const [foco, setFoco] = useState(1.0);
   const [incluirDuvidosos, setIncluirDuvidosos] = useState(false);
   const [reservaLuxo, setReservaLuxo] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -47,8 +56,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
       orcamento: budget,
       formacao,
       perfil,
-      modo,
-      ...(modo === 'valorizacao' ? { peso_valorizacao: pesoValorizacao } : {}),
+      foco,
       incluir_duvidosos: incluirDuvidosos,
       reserva_luxo: reservaLuxo,
     };
@@ -61,6 +69,11 @@ export default function NewLineupScreen({ route, navigation }: any) {
       const timeout = setTimeout(() => controller.abort(), 60000);
       const response = await postOtimizar(params);
       clearTimeout(timeout);
+      const valorizacao_total = [
+        ...response.players,
+        ...(response.tecnico ? [response.tecnico] : []),
+      ].reduce((sum, p) => sum + ((p.preco_projetado ?? 0) - p.preco), 0);
+      response.valorizacao_total = valorizacao_total;
       const lineup: Lineup = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome: nome.trim(),
@@ -149,49 +162,26 @@ export default function NewLineupScreen({ route, navigation }: any) {
         ))}
       </View>
 
-      <Text style={styles.label}>Modo</Text>
+      <Text style={styles.label}>Foco</Text>
+      <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
       <View style={styles.pickerRow}>
-        {(['max-pontos', 'valorizacao'] as const).map((m) => (
+        {FOCOS.map((v) => (
           <TouchableOpacity
-            key={m}
-            style={[styles.pickerItem, modo === m && styles.pickerActive]}
-            onPress={() => setModo(m)}
+            key={v}
+            style={[styles.pesoItem, foco === v && styles.pesoActive]}
+            onPress={() => setFoco(v)}
           >
             <Text
               style={[
                 styles.pickerText,
-                modo === m && styles.pickerTextActive,
+                foco === v && styles.pickerTextActive,
               ]}
             >
-              {m === 'max-pontos' ? 'Max Pontos' : 'Valorização'}
+              {v.toFixed(1)}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
-
-      {modo === 'valorizacao' && (
-        <>
-          <Text style={styles.label}>Peso da Valorização</Text>
-          <View style={styles.pickerRow}>
-            {PESOS.map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.pesoItem, pesoValorizacao === p && styles.pesoActive]}
-                onPress={() => setPesoValorizacao(p)}
-              >
-                <Text
-                  style={[
-                    styles.pickerText,
-                    pesoValorizacao === p && styles.pickerTextActive,
-                  ]}
-                >
-                  {p.toFixed(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      )}
 
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Incluir duvidosos</Text>
@@ -290,6 +280,7 @@ function ResultView({
         </Text>
         <Text style={styles.resultOrcamento}>
           C$ {response.orcamento_usado.toFixed(2)} usados
+          {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}${response.valorizacao_total.toFixed(2)}%` : ''}
         </Text>
       </View>
 
@@ -682,5 +673,11 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 15,
     fontWeight: '600',
+  },
+  focoHint: {
+    fontSize: 12,
+    color: '#3b82f6',
+    marginBottom: 6,
+    fontStyle: 'italic',
   },
 });

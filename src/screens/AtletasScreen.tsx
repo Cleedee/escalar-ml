@@ -47,9 +47,6 @@ export default function AtletasScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('preco_desc');
-  const [precoMin, setPrecoMin] = useState('');
-  const [precoMax, setPrecoMax] = useState('');
-  const [mediaMin, setMediaMin] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFetch = (q: string, p: string, s: string) => {
@@ -78,14 +75,6 @@ export default function AtletasScreen() {
   const filtered = useMemo(() => {
     let list = [...atletas];
 
-    const pMin = precoMin ? parseFloat(precoMin) : 0;
-    const pMax = precoMax ? parseFloat(precoMax) : Infinity;
-    const mMin = mediaMin ? parseFloat(mediaMin) : 0;
-
-    if (pMin > 0 || pMax < Infinity || mMin > 0) {
-      list = list.filter((a) => a.preco >= pMin && a.preco <= pMax && a.media >= mMin);
-    }
-
     list.sort((a, b) => {
       switch (sortBy) {
         case 'preco_desc': return b.preco - a.preco;
@@ -96,7 +85,7 @@ export default function AtletasScreen() {
     });
 
     return list;
-  }, [atletas, sortBy, precoMin, precoMax, mediaMin]);
+  }, [atletas, sortBy]);
 
   return (
     <View style={styles.container}>
@@ -166,35 +155,6 @@ export default function AtletasScreen() {
           </TouchableOpacity>
         )}
       />
-
-      <Text style={styles.filterLabel}>Filtrar</Text>
-      <View style={styles.filterRow}>
-        <TextInput
-          style={styles.filterInput}
-          placeholder="Preço min"
-          placeholderTextColor="#64748b"
-          keyboardType="decimal-pad"
-          value={precoMin}
-          onChangeText={setPrecoMin}
-        />
-        <Text style={styles.filterSep}>–</Text>
-        <TextInput
-          style={styles.filterInput}
-          placeholder="Preço max"
-          placeholderTextColor="#64748b"
-          keyboardType="decimal-pad"
-          value={precoMax}
-          onChangeText={setPrecoMax}
-        />
-        <TextInput
-          style={[styles.filterInput, { marginLeft: 8 }]}
-          placeholder="Média min"
-          placeholderTextColor="#64748b"
-          keyboardType="decimal-pad"
-          value={mediaMin}
-          onChangeText={setMediaMin}
-        />
-      </View>
 
       <Text style={styles.resultCount}>
         {filtered.length} atleta{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
@@ -406,27 +366,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3b82f6',
     fontWeight: '600',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  filterInput: {
-    flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 13,
-    color: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  filterSep: {
-    color: '#64748b',
-    marginHorizontal: 6,
-    fontSize: 14,
   },
 });
