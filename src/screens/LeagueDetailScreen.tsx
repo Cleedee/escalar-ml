@@ -171,7 +171,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
   const selectTeam = async (team: TeamSearchResult) => {
     setNome(team.nome || '');
-    setProprietario(team.nome_proprietario || '');
+    setProprietario(team.nome_cartola || '');
     setTimeId(String(team.time_id ?? ''));
     setShowTeamSearch(false);
     setTeamQuery('');
@@ -181,8 +181,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       try {
         const detail = await fetchTeamBySlug(team.slug);
         setPatrimonio(String(detail.patrimonio ?? ''));
+        setRanking(String(detail.pontos?.campeonato ?? ''));
       } catch {
-        // silently ignore — user can type patrimonio manually
+        // silently ignore — user can type patrimonio/ranking manually
       }
     }
   };
@@ -460,7 +461,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                           style={styles.teamResultItem}
                           onPress={() => selectTeam(item)}
                         >
-                          <Text style={styles.teamResultNome}>{item.nome_proprietario}</Text>
+                          <Text style={styles.teamResultNome}>{item.nome_cartola}</Text>
                           <Text style={styles.teamResultProp}>{item.nome}</Text>
                           <Text style={styles.teamResultId}>ID: {item.time_id}</Text>
                         </TouchableOpacity>

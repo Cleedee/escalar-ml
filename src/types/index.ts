@@ -183,7 +183,7 @@ export interface TeamDetailResponse {
   nome_cartola: string;
   patrimonio: number;
   url_escudo_png: string;
-  pontos: {
+  pontos?: {
     campeonato: number;
     rodada: number;
   };
@@ -192,7 +192,7 @@ export interface TeamDetailResponse {
 
 export interface TeamSearchResult {
   rodada_time_id: number;
-  nome_proprietario: string;
+  nome_cartola: string;
   slug: string;
   url_escudo_png: string;
   nome: string;
