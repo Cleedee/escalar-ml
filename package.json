@@ -28,7 +28,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export --platform web && cp web/service-worker.js dist/service-worker.js"
+    "build:web": "expo export --platform web && cp web/service-worker.js dist/service-worker.js && if [ \"$PUBLIC_URL\" != \"\" ]; then cd dist && find . -name '*.html' -exec sed -i 's|\"/_expo/|\"'\"$PUBLIC_URL\"'_expo/|g; s|\"/favicon.ico|\"'\"$PUBLIC_URL\"'favicon.ico|g' {} +; fi"
   },
   "private": true
 }
