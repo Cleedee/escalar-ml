@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, MarketStatus, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, MarketStatus, PartidasResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 export async function fetchStatus(): Promise<MarketStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
@@ -60,6 +60,12 @@ export async function fetchTeams(q: string): Promise<TeamSearchResult[]> {
 
 export async function fetchTeamBySlug(slug: string): Promise<TeamDetailResponse> {
   const res = await fetch(`${API_BASE}/cartola/time/slug/${encodeURIComponent(slug)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchPartidas(rodada: number): Promise<PartidasResponse> {
+  const res = await fetch(`${API_BASE}/cartola/partidas/${rodada}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

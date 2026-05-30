@@ -1,11 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { League, Lineup } from '../types';
 
 const LINEUPS_KEY = '@escalarml/lineups';
 const LEAGUES_KEY = '@escalarml/leagues';
 
+let storage: {
+  getItem(key: string): Promise<string | null>;
+  setItem(key: string, value: string): Promise<void>;
+  removeItem?(key: string): Promise<void>;
+};
+
+if (Platform.OS === 'web') {
+  storage = {
+    getItem: async (key) => localStorage.getItem(key),
+    setItem: async (key, value) => { localStorage.setItem(key, value); },
+  };
+} else {
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  storage = AsyncStorage;
+}
+
 export async function getLineups(): Promise<Lineup[]> {
-  const data = await AsyncStorage.getItem(LINEUPS_KEY);
+  const data = await storage.getItem(LINEUPS_KEY);
   return data ? JSON.parse(data) : [];
 }
 
@@ -17,13 +33,13 @@ export async function saveLineup(lineup: Lineup): Promise<void> {
   } else {
     lineups.unshift(lineup);
   }
-  await AsyncStorage.setItem(LINEUPS_KEY, JSON.stringify(lineups));
+  await storage.setItem(LINEUPS_KEY, JSON.stringify(lineups));
 }
 
 export async function deleteLineup(id: string): Promise<void> {
   const lineups = await getLineups();
   const filtered = lineups.filter((l) => l.id !== id);
-  await AsyncStorage.setItem(LINEUPS_KEY, JSON.stringify(filtered));
+  await storage.setItem(LINEUPS_KEY, JSON.stringify(filtered));
 }
 
 export async function getLineupsByRodada(rodada: number): Promise<Lineup[]> {
@@ -32,7 +48,7 @@ export async function getLineupsByRodada(rodada: number): Promise<Lineup[]> {
 }
 
 export async function getLeagues(): Promise<League[]> {
-  const data = await AsyncStorage.getItem(LEAGUES_KEY);
+  const data = await storage.getItem(LEAGUES_KEY);
   return data ? JSON.parse(data) : [];
 }
 
@@ -44,11 +60,11 @@ export async function saveLeague(league: League): Promise<void> {
   } else {
     leagues.unshift(league);
   }
-  await AsyncStorage.setItem(LEAGUES_KEY, JSON.stringify(leagues));
+  await storage.setItem(LEAGUES_KEY, JSON.stringify(leagues));
 }
 
 export async function deleteLeague(id: string): Promise<void> {
   const leagues = await getLeagues();
   const filtered = leagues.filter((l) => l.id !== id);
-  await AsyncStorage.setItem(LEAGUES_KEY, JSON.stringify(filtered));
+  await storage.setItem(LEAGUES_KEY, JSON.stringify(filtered));
 }

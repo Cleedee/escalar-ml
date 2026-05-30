@@ -110,7 +110,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       proprietario: proprietario.trim(),
       time_id: timeId.trim() || undefined,
       patrimonio: p,
-      ranking: isBot ? 0 : r,
+      ranking: r,
       total_acumulado: total,
       is_user: false,
       is_bot: isBot || undefined,
@@ -482,7 +482,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               <Text style={styles.label}>Patrimônio</Text>
               <TextInput style={styles.input} value={patrimonio} onChangeText={setPatrimonio} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
-              {isBot ? (
+              {isBot && (
                 <>
                   <Text style={styles.label}>Cartoletas Iniciais</Text>
                   <TextInput style={styles.input} value={cartoletasIniciais} onChangeText={setCartoletasIniciais} keyboardType="decimal-pad" placeholder="Ex: 100" placeholderTextColor="#64748b" />
@@ -550,12 +550,10 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                     </>
                   )}
                 </>
-              ) : (
-                <>
-                  <Text style={styles.label}>Ranking</Text>
-                  <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
-                </>
               )}
+
+              <Text style={styles.label}>Ranking</Text>
+              <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
               {!editTeamId && (
                 <Text style={styles.hint}>

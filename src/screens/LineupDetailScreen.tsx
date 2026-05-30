@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { Player, Reserva } from '../types';
+import { Player, Reserva, PartidasResponse } from '../types';
 import { deleteLineup } from '../services/storage';
-import { fetchPontuados } from '../services/api';
+import { fetchPontuados, fetchPartidas } from '../services/api';
 
 const posicoes: Record<string, string> = {
   GOL: 'Goleiro',
@@ -18,6 +18,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const { lineup } = route.params;
   const { response } = lineup;
   const [actualScores, setActualScores] = useState<Record<string, number> | null>(null);
+  const [partidasData, setPartidasData] = useState<PartidasResponse | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleDelete = async () => {
@@ -51,6 +52,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         setActualScores(scores);
       })
       .catch(() => {});
+    fetchPartidas(lineup.rodada)
+      .then(setPartidasData)
+      .catch(() => {});
   }, [lineup.rodada]);
 
   const getActual = (atleta_id: number): number | null => {
@@ -59,6 +63,25 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   };
 
   const hasActual = actualScores !== null;
+
+  const clubOpponents = useMemo(() => {
+    if (!partidasData) return {};
+    const map: Record<string, string> = {};
+    for (const partida of partidasData.partidas) {
+      const casa = partidasData.clubes[String(partida.clube_casa_id)];
+      const visit = partidasData.clubes[String(partida.clube_visitante_id)];
+      if (casa && visit) {
+        const duelo = `${casa.nome} x ${visit.nome}`;
+        map[casa.nome] = duelo;
+        map[visit.nome] = duelo;
+      }
+    }
+    return map;
+  }, [partidasData]);
+
+  const getDuelo = (clube: string): string | null => {
+    return clubOpponents[clube] ?? null;
+  };
 
   const allPlayers = [
     ...response.players,
@@ -128,6 +151,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 <Text style={styles.playerName}>
                   {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
                 </Text>
+                {getDuelo(p.clube) && (
+                  <Text style={styles.dueloText}>{getDuelo(p.clube)}</Text>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.detailBtn}
@@ -169,6 +195,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 <Text style={styles.tecnicoName}>
                   {response.tecnico.apelido} · {response.tecnico.clube}
                 </Text>
+                {getDuelo(response.tecnico.clube) && (
+                  <Text style={styles.dueloText}>{getDuelo(response.tecnico.clube)}</Text>
+                )}
               </View>
               <View style={styles.playerRight}>
                 <Text style={styles.playerClub}>
@@ -199,20 +228,44 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
-      {Object.keys(response.reservas).length > 0 && (
+          {Object.keys(response.reservas).length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Reservas</Text>
           {Object.entries(response.reservas).map(([pos, r]) => {
             const reserva = r as Reserva;
             return (
-            <View key={pos} style={styles.reservaRow}>
-              <Text style={styles.reservaPos}>
-                {posicoes[pos] || pos}
-              </Text>
-              <Text style={styles.reservaName}>
-                {reserva.apelido}
-                {reserva.luxo ? ' ⭐' : ''}
-              </Text>
+            <View key={pos} style={styles.reservaCard}>
+              <View style={styles.reservaTop}>
+                <View>
+                  <Text style={styles.reservaPos}>
+                    {posicoes[pos] || pos}{reserva.luxo ? ' ⭐' : ''}
+                  </Text>
+                  <Text style={styles.reservaName}>
+                    {reserva.apelido} · {reserva.clube}
+                  </Text>
+                  {getDuelo(reserva.clube) && (
+                    <Text style={styles.dueloText}>{getDuelo(reserva.clube)}</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.reservaStats}>
+                <View style={styles.playerStat}>
+                  <Text style={styles.playerStatValue}>C$ {reserva.preco.toFixed(2)}</Text>
+                  <Text style={styles.playerStatLabel}>Preço</Text>
+                </View>
+                <View style={styles.playerStat}>
+                  <Text style={styles.playerStatValue}>{reserva.previsto.toFixed(1)}</Text>
+                  <Text style={styles.playerStatLabel}>Projeção</Text>
+                </View>
+                <View style={styles.playerStat}>
+                  <Text style={[styles.playerStatValue, { color: '#3b82f6' }]}>
+                    {reserva.preco_projetado != null
+                      ? `${(reserva.preco_projetado - reserva.preco) >= 0 ? '+' : ''}C$ ${(reserva.preco_projetado - reserva.preco).toFixed(2)}`
+                      : '—'}
+                  </Text>
+                  <Text style={styles.playerStatLabel}>Valorização</Text>
+                </View>
+              </View>
             </View>
             );
           })}
@@ -468,16 +521,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#22c55e',
   },
-  reservaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  dueloText: {
+    fontSize: 11,
+    color: '#f97316',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  reservaCard: {
     backgroundColor: '#1e293b',
     borderRadius: 8,
     padding: 12,
     marginBottom: 6,
   },
+  reservaTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   reservaPos: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
     textTransform: 'uppercase',
   },
@@ -485,6 +548,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#f8fafc',
     fontWeight: '600',
+    marginTop: 1,
+  },
+  reservaStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    paddingTop: 10,
   },
   compRow: {
     flexDirection: 'row',

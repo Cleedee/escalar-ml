@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
 import StatusScreen from './src/screens/StatusScreen';
 import LineupsScreen from './src/screens/LineupsScreen';
 import NewLineupScreen from './src/screens/NewLineupScreen';
@@ -33,6 +33,12 @@ function LigasStack() {
       <Stack2.Screen name="LeagueDetail" component={LeagueDetailScreen} />
     </Stack2.Navigator>
   );
+}
+
+if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js');
+  });
 }
 
 export default function App() {

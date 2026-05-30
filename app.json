@@ -2,7 +2,7 @@
   "expo": {
     "name": "EscalarML",
     "slug": "escalar-ml",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
@@ -10,17 +10,30 @@
       "supportsTablet": true,
       "infoPlist": {
         "CFBundleIconName": "AppIcon"
-      }
+      },
+      "bundleIdentifier": "com.escalarml.app"
     },
     "android": {
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0f172a"
-      }
+      },
+      "package": "com.escalarml.app"
     },
     "web": {
-      "favicon": "./assets/icon.png"
-    }
+      "favicon": "./assets/icon.png",
+      "shortName": "EscalarML",
+      "description": "Gerencie ligas e escalações do Cartola FC",
+      "lang": "pt-BR",
+      "scope": "/",
+      "startUrl": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "backgroundColor": "#0f172a",
+      "themeColor": "#0f172a",
+      "barStyle": "light-content"
+    },
+    "plugins": []
   }
 }

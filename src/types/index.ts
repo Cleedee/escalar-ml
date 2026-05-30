@@ -314,6 +314,19 @@ export interface PontuadosResponse {
   total_atletas: number;
 }
 
+export interface PartidaInfo {
+  partida_id: number;
+  clube_casa_id: number;
+  clube_visitante_id: number;
+  partida_data: string;
+  local: string;
+}
+
+export interface PartidasResponse {
+  clubes: Record<string, { nome: string; abreviacao: string }>;
+  partidas: PartidaInfo[];
+}
+
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
   1: { label: 'Mercado Aberto', color: '#22c55e' },
   2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },
