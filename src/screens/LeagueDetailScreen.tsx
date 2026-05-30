@@ -482,6 +482,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               <Text style={styles.label}>Patrimônio</Text>
               <TextInput style={styles.input} value={patrimonio} onChangeText={setPatrimonio} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
+              <Text style={styles.label}>Ranking</Text>
+              <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
+
               {isBot && (
                 <>
                   <Text style={styles.label}>Cartoletas Iniciais</Text>
@@ -551,9 +554,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                   )}
                 </>
               )}
-
-              <Text style={styles.label}>Ranking</Text>
-              <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
               {!editTeamId && (
                 <Text style={styles.hint}>
