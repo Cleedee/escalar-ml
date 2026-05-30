@@ -42,7 +42,19 @@ npx expo run:ios        # Build iOS IPA
 npm run build:web       # Gera dist/ com index.html + service worker
 ```
 
-Hospedar em qualquer server estático (Vercel, Netlify, Render).
+#### GitHub Pages (deploy automático via CI)
+
+Ao fazer push na branch `main`, o GitHub Actions executa o workflow em `.github/workflows/deploy-pwa.yml`:
+
+1. Instala dependências
+2. Roda `npm run build:web`
+3. Faz deploy do `dist/` no GitHub Pages
+
+**Setup único:** Ir em Settings > Pages > Source > selecionar "GitHub Actions". A URL será `https://<user>.github.io/escalar-ml/`.
+
+#### Deploy manual em qualquer server estático
+
+Basta fazer upload da pasta `dist/` para qualquer servidor (Vercel, Netlify, Render).
 
 ### Android (Google Play)
 

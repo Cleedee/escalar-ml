@@ -26,13 +26,14 @@
       "shortName": "EscalarML",
       "description": "Gerencie ligas e escalações do Cartola FC",
       "lang": "pt-BR",
-      "scope": "/",
-      "startUrl": "/",
+      "scope": "/escalar-ml/",
+      "startUrl": "/escalar-ml/",
       "display": "standalone",
       "orientation": "portrait",
       "backgroundColor": "#0f172a",
       "themeColor": "#0f172a",
-      "barStyle": "light-content"
+      "barStyle": "light-content",
+      "publicPath": "/escalar-ml/"
     },
     "plugins": []
   }

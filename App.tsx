@@ -37,7 +37,7 @@ function LigasStack() {
 
 if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js');
+    navigator.serviceWorker.register('./service-worker.js');
   });
 }
 
