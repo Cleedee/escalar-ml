@@ -204,7 +204,12 @@ export default function NewLineupScreen({ route, navigation }: any) {
           ))}
         </View>
 
-        <Text style={styles.label}>Perfil de Risco</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.labelInline}>Perfil de Risco</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+            <Text style={styles.helpBtn}>?</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.pickerRow}>
           {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
             <TouchableOpacity
@@ -224,7 +229,12 @@ export default function NewLineupScreen({ route, navigation }: any) {
           ))}
         </View>
 
-        <Text style={styles.label}>Foco</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.labelInline}>Foco</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+            <Text style={styles.helpBtn}>?</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
         <View style={styles.pickerRow}>
           {FOCOS.map((v) => (
@@ -393,6 +403,33 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 6,
     marginTop: 16,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  labelInline: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  helpBtn: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#22c55e',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#22c55e',
+    textAlign: 'center',
+    lineHeight: 17,
+    overflow: 'hidden',
   },
   input: {
     backgroundColor: '#1e293b',

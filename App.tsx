@@ -10,6 +10,7 @@ import JustificarScreen from './src/screens/JustificarScreen';
 import AtletasScreen from './src/screens/AtletasScreen';
 import LeaguesScreen from './src/screens/LeaguesScreen';
 import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
+import HelpScreen from './src/screens/HelpScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack1 = createNativeStackNavigator();
@@ -22,6 +23,7 @@ function LineupsStack() {
       <Stack1.Screen name="NewLineup" component={NewLineupScreen} />
       <Stack1.Screen name="LineupDetail" component={LineupDetailScreen} />
       <Stack1.Screen name="Justificar" component={JustificarScreen} />
+      <Stack1.Screen name="Help" component={HelpScreen} />
     </Stack1.Navigator>
   );
 }
