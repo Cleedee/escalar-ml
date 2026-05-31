@@ -18,13 +18,13 @@ import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 
-const POS_MAP: Record<number, string> = {
-  1: 'goleiro',
-  2: 'lateral',
-  3: 'zagueiro',
-  4: 'meia',
-  5: 'atacante',
-  6: 'tecnico',
+const POS_ABBR: Record<number, string> = {
+  1: 'GOL',
+  2: 'LAT',
+  3: 'ZAG',
+  4: 'MEI',
+  5: 'ATA',
+  6: 'TEC',
 };
 
 function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { nome: string }>, rodada: number): Lineup {
@@ -33,54 +33,88 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
     clubMap[Number(idStr)] = c.nome;
   }
 
-  const players: Player[] = [];
-  let foundTecnico: Tecnico | null = null;
+  const fc = (id: number) => clubMap[id] || String(id);
 
-  for (const atleta of res.atletas) {
-    if (atleta.posicao_id === 6) {
-      foundTecnico = {
-        apelido: atleta.apelido,
-        clube: clubMap[atleta.clube_id] || String(atleta.clube_id),
-        atleta_id: atleta.atleta_id,
-        preco: atleta.preco_num,
-        previsto: atleta.media_num,
-        media_num: atleta.media_num,
-        jogos_num: atleta.jogos_num,
-      };
-    } else {
-      players.push({
-        atleta_id: atleta.atleta_id,
-        apelido: atleta.apelido,
-        posicao: POS_MAP[atleta.posicao_id] || 'meia',
-        preco: atleta.preco_num,
-        previsto: atleta.media_num,
-        clube: clubMap[atleta.clube_id] || String(atleta.clube_id),
-        role: res.capitao_id === atleta.atleta_id ? 'capitao' : undefined,
-      });
-    }
+  const fieldAtletas = res.atletas.filter((a) => a.posicao_id !== 6);
+  const tecAtletas = res.atletas.filter((a) => a.posicao_id === 6);
+
+  fieldAtletas.sort((a, b) => {
+    if (a.posicao_id !== b.posicao_id) return a.posicao_id - b.posicao_id;
+    return b.preco_num - a.preco_num;
+  });
+
+  const numStarters = Math.min(11, fieldAtletas.length);
+  const starters = fieldAtletas.slice(0, numStarters);
+  const bench = fieldAtletas.slice(numStarters);
+
+  const players: Player[] = starters.map((atleta) => ({
+    atleta_id: atleta.atleta_id,
+    apelido: atleta.apelido,
+    posicao: POS_ABBR[atleta.posicao_id] || 'MEI',
+    preco: atleta.preco_num,
+    previsto: atleta.media_num,
+    clube: fc(atleta.clube_id),
+    role: res.capitao_id === atleta.atleta_id ? 'capitao' : undefined,
+  }));
+
+  const reservas: Record<string, Reserva> = {};
+  for (const atleta of bench) {
+    const pos = POS_ABBR[atleta.posicao_id] || 'MEI';
+    reservas[pos] = {
+      atleta_id: atleta.atleta_id,
+      apelido: atleta.apelido,
+      clube: fc(atleta.clube_id),
+      posicao: pos,
+      preco: atleta.preco_num,
+      previsto: atleta.media_num,
+      media_num: atleta.media_num,
+      jogos_num: atleta.jogos_num,
+      variacao_num: atleta.variacao_num,
+      potential_valorizacao: 0,
+      preco_projetado: atleta.preco_num,
+      tendencia: '',
+      eficiencia: 0,
+      luxo: res.reserva_luxo_id === atleta.atleta_id,
+    };
   }
 
-  const tecnico: Tecnico = foundTecnico || {
+  let tecnico: Tecnico = {
     apelido: '',
     clube: '',
     atleta_id: 0,
     preco: 0,
     previsto: 0,
   };
+  if (tecAtletas.length > 0) {
+    const t = tecAtletas[0];
+    tecnico = {
+      apelido: t.apelido,
+      clube: fc(t.clube_id),
+      atleta_id: t.atleta_id,
+      preco: t.preco_num,
+      previsto: t.media_num,
+      media_num: t.media_num,
+      jogos_num: t.jogos_num,
+    };
+  }
+
+  const defCount = players.filter((p) => p.posicao === 'LAT' || p.posicao === 'ZAG').length;
+  const meiCount = players.filter((p) => p.posicao === 'MEI').length;
+  const ataCount = players.filter((p) => p.posicao === 'ATA').length;
 
   const response: OtimizarResponse = {
-    formation: `${players.filter((p) => p.posicao === 'zagueiro' || p.posicao === 'lateral').length}-${players.filter((p) => p.posicao === 'meia').length}-${players.filter((p) => p.posicao === 'atacante').length}`,
-    pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + (tecnico?.previsto || 0),
-    orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + (tecnico?.preco || 0),
+    formation: `${defCount}-${meiCount}-${ataCount}`,
+    pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + tecnico.previsto,
+    orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + tecnico.preco,
     players,
-    reservas: {},
+    reservas,
     tecnico,
     comparacao: [],
   };
 
   return {
     id: `cartola-${res.time.time_id}-${Date.now()}`,
-    nome: `${res.time.nome_cartola}`,
+    nome: res.time.nome_cartola,
     rodada,
     atribuido_a_team_id: undefined,
     created_at: new Date().toISOString(),
