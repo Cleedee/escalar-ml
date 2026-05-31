@@ -327,6 +327,31 @@ export interface PartidasResponse {
   partidas: PartidaInfo[];
 }
 
+export interface CartolaAthlete {
+  atleta_id: number;
+  apelido: string;
+  posicao_id: number;
+  clube_id: number;
+  preco_num: number;
+  media_num: number;
+  variacao_num: number;
+  jogos_num: number;
+  pontos_num: number;
+  status_id: number;
+  entrou_em_campo: boolean;
+}
+
+export interface CartolaTeamResponse {
+  atletas: CartolaAthlete[];
+  capitao_id: number;
+  reserva_luxo_id: number | null;
+  patrimonio: number;
+  pontos: number;
+  esquema_id: number;
+  rodada_atual: number;
+  time: { nome_cartola: string; slug: string; time_id: number };
+}
+
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
   1: { label: 'Mercado Aberto', color: '#22c55e' },
   2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },
