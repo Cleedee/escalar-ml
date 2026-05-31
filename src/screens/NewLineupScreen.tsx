@@ -312,6 +312,10 @@ export default function NewLineupScreen({ route, navigation }: any) {
         {error !== null && (
           <Text style={styles.errorMsg}>{error}</Text>
         )}
+
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>Voltar</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={showSearch} transparent animationType="slide">
@@ -502,7 +506,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontStyle: 'italic',
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -576,5 +579,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748b',
     marginLeft: 8,
+  },
+  backBtn: {
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  backBtnText: {
+    color: '#94a3b8',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
