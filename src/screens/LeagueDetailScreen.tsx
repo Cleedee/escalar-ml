@@ -69,7 +69,7 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
   };
 
   const response: OtimizarResponse = {
-    formation: `${players.filter((p) => p.posicao !== 'goleiro').length}-${players.filter((p) => p.posicao === 'atacante').length}`,
+    formation: `${players.filter((p) => p.posicao === 'zagueiro' || p.posicao === 'lateral').length}-${players.filter((p) => p.posicao === 'meia').length}-${players.filter((p) => p.posicao === 'atacante').length}`,
     pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + (tecnico?.previsto || 0),
     orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + (tecnico?.preco || 0),
     players,
