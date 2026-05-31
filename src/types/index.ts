@@ -183,9 +183,17 @@ export interface TeamDetailResponse {
   nome_cartola: string;
   patrimonio: number;
   url_escudo_png: string;
+  pontos_campeonato?: number;
   pontos?: {
     campeonato: number;
     rodada: number;
+  };
+  ranking?: {
+    atual: {
+      ranking_id: number;
+      mes: number;
+      posicao: number;
+    };
   };
   time: any;
 }

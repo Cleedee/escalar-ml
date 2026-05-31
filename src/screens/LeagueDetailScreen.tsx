@@ -302,9 +302,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       try {
         const detail = await fetchTeamBySlug(team.slug);
         setPatrimonio(String(detail.patrimonio ?? ''));
-        setRanking(String(detail.pontos?.campeonato ?? ''));
+        setRanking(String(detail.pontos_campeonato ?? detail.pontos?.campeonato ?? ''));
       } catch {
-        // silently ignore — user can type patrimonio/ranking manually
+        // silently ignore — user can type patrimonio/pontuação manually
       }
     }
   };
@@ -500,7 +500,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 {modalidade === 'patrimonio' ? (
                   <Text style={styles.statSub}>Pat: {item.patrimonio.toFixed(2)}</Text>
                 ) : (
-                  <Text style={styles.statSub}>Rank: {item.ranking.toFixed(2)}</Text>
+                  <Text style={styles.statSub}>Pont: {item.ranking.toFixed(2)}</Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -605,7 +605,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               <Text style={styles.label}>Patrimônio</Text>
               <TextInput style={styles.input} value={patrimonio} onChangeText={setPatrimonio} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
-              <Text style={styles.label}>Ranking</Text>
+              <Text style={styles.label}>Pontuação (pts)</Text>
               <TextInput style={styles.input} value={ranking} onChangeText={setRanking} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#64748b" />
 
               {isBot && (
@@ -682,7 +682,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 <Text style={styles.hint}>
                   {isBot
                     ? 'Patrimônio = orçamento atual do bot. Atualize após cada rodada processada.'
-                    : `Total acumulado será calculado automaticamente conforme a modalidade da liga (${modalidade === 'patrimonio' ? 'Patrimônio' : 'Ranking'}).`
+                    : `Total acumulado será calculado automaticamente conforme a modalidade da liga (${modalidade === 'patrimonio' ? 'Patrimônio' : 'Pontuação'}).`
                   }
                 </Text>
               )}
