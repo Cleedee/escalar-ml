@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -10,7 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { FORMACOES, Lineup, OtimizarParams } from '../types';
+import { CartolaAthlete, FORMACOES, Lineup, OtimizarParams } from '../types';
+import { fetchMercado, fetchClubes, postOtimizar } from '../services/api';
+import { saveLineup } from '../services/storage';
 
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
@@ -23,8 +26,15 @@ function labelFoco(v: number): string {
   if (v === 0.0) return 'Só Valorização';
   return v.toFixed(1);
 }
-import { postOtimizar } from '../services/api';
-import { saveLineup } from '../services/storage';
+
+const POS_MAP: Record<number, string> = {
+  1: 'GOL',
+  2: 'LAT',
+  3: 'ZAG',
+  4: 'MEI',
+  5: 'ATA',
+  6: 'TEC',
+};
 
 export default function NewLineupScreen({ route, navigation }: any) {
   const rodada = route.params?.rodada ?? 0;
@@ -40,8 +50,56 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [excluirText, setExcluirText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Lineup | null>(null);
   const [feedback, setFeedback] = useState('');
+
+  const [mercadoAtletas, setMercadoAtletas] = useState<CartolaAthlete[]>([]);
+  const [clubeMap, setClubeMap] = useState<Record<string, string>>({});
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<'obrigar' | 'excluir'>('obrigar');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    Promise.all([fetchMercado(), fetchClubes()])
+      .then(([mercado, clubes]) => {
+        setMercadoAtletas(Object.values(mercado.atletas));
+        const map: Record<string, string> = {};
+        for (const [id, c] of Object.entries(clubes)) {
+          map[id] = c.nome;
+        }
+        setClubeMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const openSearch = useCallback((target: 'obrigar' | 'excluir') => {
+    setSearchTarget(target);
+    setSearchQuery('');
+    setShowSearch(true);
+  }, []);
+
+  const selectAthlete = useCallback((athlete: CartolaAthlete) => {
+    const idStr = String(athlete.atleta_id);
+    if (searchTarget === 'obrigar') {
+      setObrigarText((prev) => {
+        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+        if (ids.includes(idStr)) return prev;
+        return prev ? `${prev}, ${idStr}` : idStr;
+      });
+    } else {
+      setExcluirText((prev) => {
+        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+        if (ids.includes(idStr)) return prev;
+        return prev ? `${prev}, ${idStr}` : idStr;
+      });
+    }
+    setShowSearch(false);
+  }, [searchTarget]);
+
+  const filtered = searchQuery.trim()
+    ? mercadoAtletas.filter((a) =>
+        a.apelido.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 30)
+    : mercadoAtletas.slice(0, 30);
 
   async function handleGenerate() {
     const budget = parseFloat(orcamento);
@@ -104,146 +162,202 @@ export default function NewLineupScreen({ route, navigation }: any) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      <Text style={styles.title}>Nova Escalação</Text>
-      <Text style={styles.subtitle}>Rodada {rodada}</Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.inner}>
+        <Text style={styles.title}>Nova Escalação</Text>
+        <Text style={styles.subtitle}>Rodada {rodada}</Text>
 
-      <Text style={styles.label}>Nome</Text>
-      <TextInput
-        style={styles.input}
-        value={nome}
-        onChangeText={setNome}
-        placeholderTextColor="#64748b"
-      />
-
-      <Text style={styles.label}>Orçamento (C$)</Text>
-      <TextInput
-        style={styles.input}
-        value={orcamento}
-        onChangeText={setOrcamento}
-        keyboardType="decimal-pad"
-        placeholderTextColor="#64748b"
-      />
-
-      <Text style={styles.label}>Formação</Text>
-      <View style={styles.pickerRow}>
-        {FORMACOES.map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.pickerItem, formacao === f && styles.pickerActive]}
-            onPress={() => setFormacao(f)}
-          >
-            <Text
-              style={[
-                styles.pickerText,
-                formacao === f && styles.pickerTextActive,
-              ]}
-            >
-              {f}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Perfil de Risco</Text>
-      <View style={styles.pickerRow}>
-        {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[styles.pickerItem, perfil === p && styles.pickerActive]}
-            onPress={() => setPerfil(p)}
-          >
-            <Text
-              style={[
-                styles.pickerText,
-                perfil === p && styles.pickerTextActive,
-              ]}
-            >
-              {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : 'Conservador'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Foco</Text>
-      <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
-      <View style={styles.pickerRow}>
-        {FOCOS.map((v) => (
-          <TouchableOpacity
-            key={v}
-            style={[styles.pesoItem, foco === v && styles.pesoActive]}
-            onPress={() => setFoco(v)}
-          >
-            <Text
-              style={[
-                styles.pickerText,
-                foco === v && styles.pickerTextActive,
-              ]}
-            >
-              {v.toFixed(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Incluir duvidosos</Text>
-        <Switch
-          value={incluirDuvidosos}
-          onValueChange={setIncluirDuvidosos}
-          trackColor={{ false: '#334155', true: '#22c55e' }}
-          thumbColor="#f8fafc"
+        <Text style={styles.label}>Nome</Text>
+        <TextInput
+          style={styles.input}
+          value={nome}
+          onChangeText={setNome}
+          placeholderTextColor="#64748b"
         />
-      </View>
 
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>Reserva de luxo</Text>
-        <Switch
-          value={reservaLuxo}
-          onValueChange={setReservaLuxo}
-          trackColor={{ false: '#334155', true: '#22c55e' }}
-          thumbColor="#f8fafc"
+        <Text style={styles.label}>Orçamento (C$)</Text>
+        <TextInput
+          style={styles.input}
+          value={orcamento}
+          onChangeText={setOrcamento}
+          keyboardType="decimal-pad"
+          placeholderTextColor="#64748b"
         />
-      </View>
 
-      <Text style={styles.label}>Obrigar atletas (IDs separados por vírgula)</Text>
-      <TextInput
-        style={styles.input}
-        value={obrigarText}
-        onChangeText={setObrigarText}
-        placeholder="Ex: 65753, 71234, 78901"
-        placeholderTextColor="#64748b"
-        keyboardType="number-pad"
-      />
+        <Text style={styles.label}>Formação</Text>
+        <View style={styles.pickerRow}>
+          {FORMACOES.map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.pickerItem, formacao === f && styles.pickerActive]}
+              onPress={() => setFormacao(f)}
+            >
+              <Text
+                style={[
+                  styles.pickerText,
+                  formacao === f && styles.pickerTextActive,
+                ]}
+              >
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <Text style={styles.label}>Excluir atletas (IDs separados por vírgula)</Text>
-      <TextInput
-        style={styles.input}
-        value={excluirText}
-        onChangeText={setExcluirText}
-        placeholder="Ex: 65753, 71234, 78901"
-        placeholderTextColor="#64748b"
-        keyboardType="number-pad"
-      />
+        <Text style={styles.label}>Perfil de Risco</Text>
+        <View style={styles.pickerRow}>
+          {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.pickerItem, perfil === p && styles.pickerActive]}
+              onPress={() => setPerfil(p)}
+            >
+              <Text
+                style={[
+                  styles.pickerText,
+                  perfil === p && styles.pickerTextActive,
+                ]}
+              >
+                {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : 'Conservador'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <TouchableOpacity
-        style={[styles.generateBtn, loading && styles.generateBtnDisabled]}
-        onPress={handleGenerate}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.generateBtnText}>Gerar Escalação</Text>
+        <Text style={styles.label}>Foco</Text>
+        <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
+        <View style={styles.pickerRow}>
+          {FOCOS.map((v) => (
+            <TouchableOpacity
+              key={v}
+              style={[styles.pesoItem, foco === v && styles.pesoActive]}
+              onPress={() => setFoco(v)}
+            >
+              <Text
+                style={[
+                  styles.pickerText,
+                  foco === v && styles.pickerTextActive,
+                ]}
+              >
+                {v.toFixed(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Incluir duvidosos</Text>
+          <Switch
+            value={incluirDuvidosos}
+            onValueChange={setIncluirDuvidosos}
+            trackColor={{ false: '#334155', true: '#22c55e' }}
+            thumbColor="#f8fafc"
+          />
+        </View>
+
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Reserva de luxo</Text>
+          <Switch
+            value={reservaLuxo}
+            onValueChange={setReservaLuxo}
+            trackColor={{ false: '#334155', true: '#22c55e' }}
+            thumbColor="#f8fafc"
+          />
+        </View>
+
+        <Text style={styles.label}>Obrigar atletas</Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={[styles.input, styles.inputFlex]}
+            value={obrigarText}
+            onChangeText={setObrigarText}
+            placeholder="IDs separados por vírgula"
+            placeholderTextColor="#64748b"
+            keyboardType="number-pad"
+          />
+          <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
+            <Text style={styles.searchBtnText}>🔍</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.label}>Excluir atletas</Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={[styles.input, styles.inputFlex]}
+            value={excluirText}
+            onChangeText={setExcluirText}
+            placeholder="IDs separados por vírgula"
+            placeholderTextColor="#64748b"
+            keyboardType="number-pad"
+          />
+          <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
+            <Text style={styles.searchBtnText}>🔍</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.generateBtn, loading && styles.generateBtnDisabled]}
+          onPress={handleGenerate}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.generateBtnText}>Gerar Escalação</Text>
+          )}
+        </TouchableOpacity>
+        {feedback !== '' && (
+          <Text style={styles.feedback}>{feedback}</Text>
         )}
-      </TouchableOpacity>
-      {feedback !== '' && (
-        <Text style={styles.feedback}>{feedback}</Text>
-      )}
-      {error !== null && (
-        <Text style={styles.errorMsg}>{error}</Text>
-      )}
-    </ScrollView>
+        {error !== null && (
+          <Text style={styles.errorMsg}>{error}</Text>
+        )}
+      </ScrollView>
+
+      <Modal visible={showSearch} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {searchTarget === 'obrigar' ? 'Obrigar' : 'Excluir'} — selecione o atleta
+              </Text>
+              <TouchableOpacity onPress={() => setShowSearch(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.modalSearch}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar por apelido..."
+              placeholderTextColor="#64748b"
+              autoFocus
+            />
+            <ScrollView style={styles.modalList}>
+              {filtered.length === 0 ? (
+                <Text style={styles.modalEmpty}>Nenhum atleta encontrado</Text>
+              ) : (
+                filtered.map((a) => (
+                  <TouchableOpacity
+                    key={a.atleta_id}
+                    style={styles.modalItem}
+                    onPress={() => selectAthlete(a)}
+                  >
+                    <View style={styles.modalItemLeft}>
+                      <Text style={styles.modalItemName}>{a.apelido}</Text>
+                      <Text style={styles.modalItemDetail}>
+                        {POS_MAP[a.posicao_id] || '?'} · {clubeMap[String(a.clube_id)] || a.clube_id} · C$ {a.preco_num.toFixed(2)}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalItemId}>#{a.atleta_id}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -284,6 +398,27 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     borderWidth: 1,
     borderColor: '#334155',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  searchBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 10,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnText: {
+    fontSize: 18,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -361,177 +496,85 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
-  resultHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  resultTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  resultFormacao: {
-    fontSize: 15,
-    color: '#22c55e',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  resultOrcamento: {
-    fontSize: 13,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#22c55e',
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22c55e',
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  detailBtn: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailBtnText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    fontStyle: 'italic',
-  },
-  playerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-  },
-  tecnicoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: '#f59e0b',
-  },
-  tecnicoName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
-  },
-  tecnicoClub: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  playerLeft: {},
-  playerPos: {
-    fontSize: 11,
-    color: '#64748b',
-    textTransform: 'uppercase',
-  },
-  playerName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
-  },
-  playerRight: {
-    alignItems: 'flex-end',
-  },
-  playerClub: {
-    fontSize: 12,
-    color: '#94a3b8',
-  },
-  playerPrice: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  reservaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-  },
-  reservaPos: {
-    fontSize: 12,
-    color: '#64748b',
-    textTransform: 'uppercase',
-  },
-  reservaName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
-  },
-  compRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-  },
-  compFormacao: {
-    fontSize: 14,
-    color: '#cbd5e1',
-  },
-  compPts: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
-  },
-  backBtn: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  backBtnText: {
-    color: '#94a3b8',
-    fontSize: 15,
-    fontWeight: '600',
-  },
   focoHint: {
     fontSize: 12,
     color: '#3b82f6',
     marginBottom: 6,
     fontStyle: 'italic',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1e293b',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  modalClose: {
+    fontSize: 18,
+    color: '#94a3b8',
+    padding: 4,
+  },
+  modalSearch: {
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    color: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
+  },
+  modalList: {
+    maxHeight: 400,
+  },
+  modalEmpty: {
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 24,
+    fontSize: 14,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  modalItemLeft: {
+    flex: 1,
+  },
+  modalItemName: {
+    fontSize: 15,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
+  modalItemDetail: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  modalItemId: {
+    fontSize: 11,
+    color: '#64748b',
+    marginLeft: 8,
   },
 });

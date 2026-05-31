@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, PartidasResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 export async function fetchStatus(): Promise<MarketStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
@@ -72,6 +72,12 @@ export async function fetchTeamById(timeId: string | number): Promise<CartolaTea
 
 export async function fetchClubes(): Promise<Record<string, { nome: string; abreviacao: string }>> {
   const res = await fetch(`${API_BASE}/cartola/clubes`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchMercado(): Promise<MercadoResponse> {
+  const res = await fetch(`${API_BASE}/cartola/mercado`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

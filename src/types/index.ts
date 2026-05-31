@@ -341,6 +341,10 @@ export interface CartolaAthlete {
   entrou_em_campo: boolean;
 }
 
+export interface MercadoResponse {
+  atletas: Record<string, CartolaAthlete>;
+}
+
 export interface CartolaTeamResponse {
   atletas: CartolaAthlete[];
   capitao_id: number;
