@@ -36,6 +36,8 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [foco, setFoco] = useState(1.0);
   const [incluirDuvidosos, setIncluirDuvidosos] = useState(false);
   const [reservaLuxo, setReservaLuxo] = useState(true);
+  const [obrigarText, setObrigarText] = useState('');
+  const [excluirText, setExcluirText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Lineup | null>(null);
@@ -52,6 +54,9 @@ export default function NewLineupScreen({ route, navigation }: any) {
       return;
     }
 
+    const obrigar = obrigarText.trim() ? obrigarText.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) : undefined;
+    const excluir = excluirText.trim() ? excluirText.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) : undefined;
+
     const params: OtimizarParams = {
       orcamento: budget,
       formacao,
@@ -59,6 +64,8 @@ export default function NewLineupScreen({ route, navigation }: any) {
       foco,
       incluir_duvidosos: incluirDuvidosos,
       reserva_luxo: reservaLuxo,
+      ...(obrigar && obrigar.length > 0 && { obrigar }),
+      ...(excluir && excluir.length > 0 && { excluir }),
     };
 
     setError(null);
@@ -198,6 +205,26 @@ export default function NewLineupScreen({ route, navigation }: any) {
           thumbColor="#f8fafc"
         />
       </View>
+
+      <Text style={styles.label}>Obrigar atletas (IDs separados por vírgula)</Text>
+      <TextInput
+        style={styles.input}
+        value={obrigarText}
+        onChangeText={setObrigarText}
+        placeholder="Ex: 65753, 71234, 78901"
+        placeholderTextColor="#64748b"
+        keyboardType="number-pad"
+      />
+
+      <Text style={styles.label}>Excluir atletas (IDs separados por vírgula)</Text>
+      <TextInput
+        style={styles.input}
+        value={excluirText}
+        onChangeText={setExcluirText}
+        placeholder="Ex: 65753, 71234, 78901"
+        placeholderTextColor="#64748b"
+        keyboardType="number-pad"
+      />
 
       <TouchableOpacity
         style={[styles.generateBtn, loading && styles.generateBtnDisabled]}
