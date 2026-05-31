@@ -84,7 +84,6 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
     rodada,
     atribuido_a_team_id: undefined,
     created_at: new Date().toISOString(),
-    params: {} as OtimizarParams,
     response,
   };
 }

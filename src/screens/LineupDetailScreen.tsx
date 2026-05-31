@@ -106,21 +106,23 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </Text>
       </View>
 
-      {lineup.params && (
+      {lineup.params?.foco != null && (
         <View style={styles.paramsBox}>
           <Text style={styles.paramsTitle}>Parâmetros da otimização</Text>
           <View style={styles.paramsRow}>
             <Text style={styles.paramsLabel}>Foco</Text>
             <Text style={styles.paramsValue}>
-              {lineup.params.foco == null ? '—' : lineup.params.foco === 1.0 ? 'Só Pontuação' : lineup.params.foco >= 0.8 ? '↑ Pontuação' : lineup.params.foco === 0.7 ? 'Valoriz. Leve' : lineup.params.foco === 0.5 ? 'Equilibrado' : lineup.params.foco === 0.3 ? '↑ Valorização' : lineup.params.foco === 0.0 ? 'Só Valorização' : lineup.params.foco.toFixed(1)}
+              {lineup.params.foco === 1.0 ? 'Só Pontuação' : lineup.params.foco >= 0.8 ? '↑ Pontuação' : lineup.params.foco === 0.7 ? 'Valoriz. Leve' : lineup.params.foco === 0.5 ? 'Equilibrado' : lineup.params.foco === 0.3 ? '↑ Valorização' : lineup.params.foco === 0.0 ? 'Só Valorização' : lineup.params.foco.toFixed(1)}
             </Text>
           </View>
-          <View style={styles.paramsRow}>
-            <Text style={styles.paramsLabel}>Perfil</Text>
-            <Text style={styles.paramsValue}>
-              {lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}
-            </Text>
-          </View>
+          {lineup.params.perfil && (
+            <View style={styles.paramsRow}>
+              <Text style={styles.paramsLabel}>Perfil</Text>
+              <Text style={styles.paramsValue}>
+                {lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}
+              </Text>
+            </View>
+          )}
           {lineup.estrategia && (
             <View style={styles.paramsRow}>
               <Text style={styles.paramsLabel}>Estratégia</Text>

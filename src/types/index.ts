@@ -79,7 +79,7 @@ export interface Lineup {
   rodada: number;
   atribuido_a_team_id?: string;
   created_at: string;
-  params: OtimizarParams;
+  params?: OtimizarParams;
   response: OtimizarResponse;
   estrategia?: string;
 }
