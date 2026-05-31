@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Lineup } from '../types';
+import { League, Lineup } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
-import { getLineupsByRodada } from '../services/storage';
+import { getLeagues, getLineupsByRodada } from '../services/storage';
 
 export default function LineupsScreen({ navigation }: any) {
   const [lineups, setLineups] = useState<Lineup[]>([]);
@@ -19,6 +19,14 @@ export default function LineupsScreen({ navigation }: any) {
   const [rodadaAtual, setRodadaAtual] = useState<number>(17);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [leagues, setLeagues] = useState<League[]>([]);
+
+  const teamLookup: Record<string, { team: string; league: string }> = {};
+  for (const liga of leagues) {
+    for (const time of liga.times) {
+      teamLookup[time.id] = { team: time.nome, league: liga.nome };
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -35,9 +43,12 @@ export default function LineupsScreen({ navigation }: any) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getLineupsByRodada(rodada)
-      .then((items) => {
-        if (!cancelled) setLineups(items);
+    Promise.all([getLineupsByRodada(rodada), getLeagues()])
+      .then(([items, ligas]) => {
+        if (!cancelled) {
+          setLineups(items);
+          setLeagues(ligas);
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -110,6 +121,11 @@ export default function LineupsScreen({ navigation }: any) {
                 <Text style={styles.cardNome}>{item.nome}</Text>
                 <Text style={styles.cardRodada}>R{item.rodada}</Text>
               </View>
+              {item.atribuido_a_team_id && teamLookup[item.atribuido_a_team_id] && (
+                <Text style={styles.cardTeam}>
+                  {teamLookup[item.atribuido_a_team_id].team} · {teamLookup[item.atribuido_a_team_id].league}
+                </Text>
+              )}
               <Text style={styles.cardFormacao}>
                 {item.response.formation} · {item.response.pontos_previstos.toFixed(1)} pts
               </Text>
@@ -257,6 +273,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#22c55e',
     fontWeight: '600',
+  },
+  cardTeam: {
+    fontSize: 12,
+    color: '#f97316',
+    marginBottom: 4,
   },
   cardFormacao: {
     fontSize: 13,
