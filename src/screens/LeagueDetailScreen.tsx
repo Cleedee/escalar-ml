@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
   ScrollView,
@@ -11,11 +12,82 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, TeamSearchResult, League, Lineup, OtimizarParams, Player, Reserva, Tecnico, Team } from '../types';
-import { fetchTeams, fetchTeamBySlug, fetchStatus, postBotEscalar } from '../services/api';
+import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, Reserva, TeamSearchResult, Tecnico, Team } from '../types';
+import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
+
+const POS_MAP: Record<number, string> = {
+  1: 'goleiro',
+  2: 'lateral',
+  3: 'zagueiro',
+  4: 'meia',
+  5: 'atacante',
+  6: 'tecnico',
+};
+
+function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { nome: string }>, rodada: number): Lineup {
+  const clubMap: Record<number, string> = {};
+  for (const [idStr, c] of Object.entries(clubes)) {
+    clubMap[Number(idStr)] = c.nome;
+  }
+
+  const players: Player[] = [];
+  let foundTecnico: Tecnico | null = null;
+
+  for (const atleta of res.atletas) {
+    if (atleta.posicao_id === 6) {
+      foundTecnico = {
+        apelido: atleta.apelido,
+        clube: clubMap[atleta.clube_id] || String(atleta.clube_id),
+        atleta_id: atleta.atleta_id,
+        preco: atleta.preco_num,
+        previsto: atleta.media_num,
+        media_num: atleta.media_num,
+        jogos_num: atleta.jogos_num,
+      };
+    } else {
+      players.push({
+        atleta_id: atleta.atleta_id,
+        apelido: atleta.apelido,
+        posicao: POS_MAP[atleta.posicao_id] || 'meia',
+        preco: atleta.preco_num,
+        previsto: atleta.media_num,
+        clube: clubMap[atleta.clube_id] || String(atleta.clube_id),
+        role: res.capitao_id === atleta.atleta_id ? 'capitao' : undefined,
+      });
+    }
+  }
+
+  const tecnico: Tecnico = foundTecnico || {
+    apelido: '',
+    clube: '',
+    atleta_id: 0,
+    preco: 0,
+    previsto: 0,
+  };
+
+  const response: OtimizarResponse = {
+    formation: `${players.filter((p) => p.posicao !== 'goleiro').length}-${players.filter((p) => p.posicao === 'atacante').length}`,
+    pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + (tecnico?.previsto || 0),
+    orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + (tecnico?.preco || 0),
+    players,
+    reservas: {},
+    tecnico,
+    comparacao: [],
+  };
+
+  return {
+    id: `cartola-${res.time.time_id}-${Date.now()}`,
+    nome: `${res.time.nome_cartola}`,
+    rodada,
+    atribuido_a_team_id: undefined,
+    created_at: new Date().toISOString(),
+    params: {} as OtimizarParams,
+    response,
+  };
+}
 
 export default function LeagueDetailScreen({ route, navigation }: any) {
   const { league: initialLeague } = route.params;
@@ -129,6 +201,23 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
   const handleDeleteTeam = (teamId: string) => {
     setLeague({ ...league, times: league.times.filter((t) => t.id !== teamId) });
+  };
+
+  const handleImportTeam = async (team: Team) => {
+    try {
+      const [teamData, clubes] = await Promise.all([
+        fetchTeamById(team.time_id!),
+        fetchClubes(),
+      ]);
+      const lineup = mapCartolaToLineup(teamData, clubes, rodadaAtual);
+      lineup.atribuido_a_team_id = team.id;
+      lineup.nome = `${team.nome} (importado)`;
+      await saveLineup(lineup);
+      setLineups((prev) => [...prev, lineup]);
+      navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup } });
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível importar a escalação do time.');
+    }
   };
 
   const openEditLeague = () => {
@@ -391,6 +480,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                   </TouchableOpacity>
                 ) : null;
               })()}
+              {item.time_id && (
+                <TouchableOpacity style={styles.importActionBtn} onPress={() => handleImportTeam(item)}>
+                  <Text style={styles.importActionBtnText}>📥</Text>
+                </TouchableOpacity>
+              )}
               {item.is_bot && (
                 <TouchableOpacity style={styles.botActionBtn} onPress={() => openGerenciarBot(item)}>
                   <Text style={styles.botActionBtnText}>⚙</Text>
@@ -1124,6 +1218,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   lineupActionBtnText: {
+    fontSize: 16,
+  },
+  importActionBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  importActionBtnText: {
     fontSize: 16,
   },
   botInfoGrid: {

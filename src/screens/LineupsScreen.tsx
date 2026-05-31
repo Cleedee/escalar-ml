@@ -2,65 +2,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  Modal,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CartolaTeamResponse, League, Lineup, OtimizarResponse, Player, Tecnico } from '../types';
+import { League, Lineup } from '../types';
 import { API_BASE } from '../config';
-import { fetchClubes, fetchStatus, fetchTeamById } from '../services/api';
-import { getLeagues, getLineupsByRodada, saveLineup } from '../services/storage';
-
-const POS_MAP: Record<number, string> = { 1: 'GOL', 2: 'LAT', 3: 'ZAG', 4: 'MEI', 5: 'ATA', 6: 'TEC' };
-
-function mapCartolaToLineup(data: CartolaTeamResponse, clubes: Record<string, { nome: string }>): { response: OtimizarResponse; nome: string } {
-  const clubeNome = (clubeId: number) => clubes[String(clubeId)]?.nome || String(clubeId);
-
-  const tecData = data.atletas.find((a) => a.posicao_id === 6);
-  const fieldPlayers = data.atletas.filter((a) => a.posicao_id !== 6);
-
-  const tecnico: Tecnico = {
-    atleta_id: tecData?.atleta_id || 0,
-    apelido: tecData?.apelido || '',
-    clube: tecData ? clubeNome(tecData.clube_id) : '',
-    preco: tecData?.preco_num || 0,
-    previsto: tecData?.media_num || 0,
-    media_num: tecData?.media_num,
-    jogos_num: tecData?.jogos_num,
-  };
-
-  const players: Player[] = fieldPlayers.map((a) => ({
-    atleta_id: a.atleta_id,
-    apelido: a.apelido,
-    posicao: POS_MAP[a.posicao_id] || String(a.posicao_id),
-    preco: a.preco_num,
-    previsto: a.media_num,
-    clube: clubeNome(a.clube_id),
-    role: a.atleta_id === data.capitao_id ? 'capitao' as const : undefined,
-    variacao_num: a.variacao_num,
-    media_num: a.media_num,
-    jogos_num: a.jogos_num,
-  }));
-
-  return {
-    nome: `📥 ${data.time.nome_cartola} - R${data.rodada_atual}`,
-    response: {
-      formation: 'Importada',
-      pontos_previstos: data.pontos,
-      orcamento_usado: data.patrimonio,
-      players,
-      tecnico,
-      reservas: {},
-      comparacao: [],
-      rodada: data.rodada_atual,
-    },
-  };
-}
+import { fetchStatus } from '../services/api';
+import { getLeagues, getLineupsByRodada } from '../services/storage';
 
 export default function LineupsScreen({ navigation }: any) {
   const [lineups, setLineups] = useState<Lineup[]>([]);
@@ -69,13 +20,6 @@ export default function LineupsScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [leagues, setLeagues] = useState<League[]>([]);
-
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importTimeId, setImportTimeId] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
-  const [importTeamName, setImportTeamName] = useState('');
-  const [importData, setImportData] = useState<CartolaTeamResponse | null>(null);
-  const [importClubes, setImportClubes] = useState<Record<string, { nome: string }> | null>(null);
 
   const teamLookup: Record<string, { team: string; league: string }> = {};
   for (const liga of leagues) {
@@ -120,61 +64,6 @@ export default function LineupsScreen({ navigation }: any) {
     if (nova >= 1 && nova <= rodadaAtual + 5) setRodada(nova);
   };
 
-  const handleSearchTeam = async () => {
-    const id = importTimeId.trim();
-    if (!id) { Alert.alert('Erro', 'Informe o ID do time'); return; }
-    setImportLoading(true);
-    setImportTeamName('');
-    setImportData(null);
-    try {
-      const [data, clubes] = await Promise.all([
-        fetchTeamById(id),
-        importClubes || fetchClubes(),
-      ]);
-      setImportData(data);
-      setImportClubes(clubes);
-      setImportTeamName(data.time.nome_cartola);
-    } catch {
-      Alert.alert('Erro', 'Time não encontrado. Verifique o ID.');
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const handleImport = async () => {
-    if (!importData || !importClubes) return;
-    setImportLoading(true);
-    try {
-      const { nome, response } = mapCartolaToLineup(importData, importClubes);
-      const lineup: Lineup = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        nome,
-        rodada: importData.rodada_atual,
-        created_at: new Date().toISOString(),
-        params: { orcamento: importData.patrimonio, formacao: 'auto', perfil: 'neutro', foco: 1, incluir_duvidosos: false, reserva_luxo: true },
-        response,
-      };
-      await saveLineup(lineup);
-      setShowImportModal(false);
-      setImportTimeId('');
-      setImportTeamName('');
-      setImportData(null);
-      setRodada(importData.rodada_atual);
-      navigation.navigate('LineupDetail', { lineup });
-    } catch {
-      Alert.alert('Erro', 'Falha ao importar escalação');
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const openImport = () => {
-    setImportTimeId('');
-    setImportTeamName('');
-    setImportData(null);
-    setShowImportModal(true);
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -196,17 +85,12 @@ export default function LineupsScreen({ navigation }: any) {
             <Text style={styles.atualBtnText}>Atual</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.btnRow}>
-          <TouchableOpacity
-            style={styles.novaBtn}
-            onPress={() => navigation.navigate('NewLineup', { rodada })}
-          >
-            <Text style={styles.novaBtnText}>+ Nova</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.importBtn} onPress={openImport}>
-            <Text style={styles.importBtnText}>📥 Importar</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.novaBtn}
+          onPress={() => navigation.navigate('NewLineup', { rodada })}
+        >
+          <Text style={styles.novaBtnText}>+ Nova</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -274,50 +158,6 @@ export default function LineupsScreen({ navigation }: any) {
         </View>
         </View>
       )}
-
-      <Modal visible={showImportModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Importar escalação</Text>
-            <Text style={styles.modalSub}>ID do time no Cartola</Text>
-            <TextInput
-              style={styles.input}
-              value={importTimeId}
-              onChangeText={setImportTimeId}
-              keyboardType="number-pad"
-              placeholder="Ex: 50062955"
-              placeholderTextColor="#64748b"
-            />
-            <TouchableOpacity style={styles.searchBtn} onPress={handleSearchTeam} disabled={importLoading}>
-              {importLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.searchBtnText}>Buscar</Text>
-              )}
-            </TouchableOpacity>
-
-            {importTeamName ? (
-              <View style={styles.teamFound}>
-                <Text style={styles.teamFoundLabel}>Time:</Text>
-                <Text style={styles.teamFoundName}>{importTeamName}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowImportModal(false)}>
-                <Text style={styles.cancelBtnText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.importConfirmBtn, !importData && styles.btnDisabled]}
-                onPress={handleImport}
-                disabled={!importData || importLoading}
-              >
-                <Text style={styles.importConfirmBtnText}>Importar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -380,12 +220,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
   novaBtn: {
-    flex: 1,
     backgroundColor: '#22c55e',
     borderRadius: 10,
     paddingVertical: 12,
@@ -393,19 +228,6 @@ const styles = StyleSheet.create({
   },
   novaBtnText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  importBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#3b82f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  importBtnText: {
-    color: '#3b82f6',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -497,104 +319,5 @@ const styles = StyleSheet.create({
   cardOrcamento: {
     fontSize: 11,
     color: '#64748b',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  modalContent: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 360,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 4,
-  },
-  modalSub: {
-    fontSize: 13,
-    color: '#94a3b8',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  input: {
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 15,
-    color: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  searchBtn: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  searchBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  teamFound: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#0f172a',
-    borderRadius: 8,
-  },
-  teamFoundLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    marginRight: 6,
-  },
-  teamFoundName: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
-    flex: 1,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  cancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  importConfirmBtn: {
-    flex: 1,
-    backgroundColor: '#3b82f6',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  importConfirmBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  btnDisabled: {
-    opacity: 0.4,
   },
 });
