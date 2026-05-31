@@ -44,7 +44,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [focoBot, setFocoBot] = useState(1.0);
   const [perfilBot, setPerfilBot] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
   const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
-  const [botResult, setBotResult] = useState<BotEscalarResponse | null>(null);
   const [botLoading, setBotLoading] = useState(false);
   const [rodadaAtual, setRodadaAtual] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
@@ -193,7 +192,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setEditEstrategia(bot.estrategia || 'auto');
     setEditFoco(bot.foco ?? 1.0);
     setEditPerfil(bot.perfil || 'neutro');
-    setBotResult(null);
   };
 
   const salvarEstrategiaBot = () => {
@@ -213,7 +211,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
   const closeGerenciarBot = () => {
     setGerenciandoBot(null);
-    setBotResult(null);
   };
 
   function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team): { params: OtimizarParams; response: Lineup['response'] } {
@@ -283,7 +280,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     const bot = gerenciandoBot;
     if (!bot?.is_bot) return;
     setBotLoading(true);
-    setBotResult(null);
     try {
       const lider = sorted[0];
       const proximo = sorted.find((t) => t.total_acumulado > bot.total_acumulado && t.id !== bot.id);
@@ -304,7 +300,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
           : 'auto',
       };
       const result = await postBotEscalar(params);
-      setBotResult(result);
 
       const lineups = await getLineups();
       const existingIdx = lineups.findIndex(
@@ -322,8 +317,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         estrategia: result.estrategia,
       };
       await saveLineup(lineup);
+      setGerenciandoBot(null);
+      navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup } });
     } catch (e: any) {
-      setBotResult(null);
     } finally {
       setBotLoading(false);
     }
@@ -734,34 +730,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
               {botLoading && (
                 <ActivityIndicator size="large" color="#22c55e" style={{ marginVertical: 24 }} />
-              )}
-
-              {botResult && (
-                <View style={styles.botResultArea}>
-                  <Text style={styles.botEstrategia}>📋 {botResult.estrategia}</Text>
-                  <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Foco:</Text>
-                    <Text style={styles.botResultValue}>
-                      {editFoco.toFixed(1)} ({editFoco === 1.0 ? 'Só Pontuação' : editFoco === 0.0 ? 'Só Valorização' : editFoco >= 0.8 ? '↑ Pontuação' : editFoco === 0.7 ? 'Valoriz. Leve' : editFoco === 0.5 ? 'Equilibrado' : editFoco === 0.3 ? '↑ Valorização' : ''})
-                    </Text>
-                  </View>
-                  <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Perfil:</Text>
-                    <Text style={styles.botResultValue}>{botResult.perfil}</Text>
-                  </View>
-                  <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Formação:</Text>
-                    <Text style={styles.botResultValue}>{botResult.formacao}</Text>
-                  </View>
-                  <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Orçamento usado:</Text>
-                    <Text style={styles.botResultValue}>C$ {botResult.orcamento_usado.toFixed(2)}</Text>
-                  </View>
-                  <View style={styles.botResultRow}>
-                    <Text style={styles.botResultLabel}>Pontos previstos:</Text>
-                    <Text style={styles.botResultValue}>{botResult.pontos_previstos.toFixed(2)}</Text>
-                  </View>
-                </View>
               )}
 
               <View style={styles.modalButtonsGroup}>
@@ -1182,32 +1150,6 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontWeight: '700',
     marginTop: 4,
-  },
-  botResultArea: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  botEstrategia: {
-    fontSize: 13,
-    color: '#f8fafc',
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  botResultRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  botResultLabel: {
-    fontSize: 13,
-    color: '#94a3b8',
-  },
-  botResultValue: {
-    fontSize: 13,
-    color: '#f8fafc',
-    fontWeight: '600',
   },
   modalButtonsGroup: {
     marginTop: 24,

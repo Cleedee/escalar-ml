@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { FORMACOES, Lineup, OtimizarParams, Player, Tecnico } from '../types';
+import { FORMACOES, Lineup, OtimizarParams } from '../types';
 
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
@@ -23,7 +23,7 @@ function labelFoco(v: number): string {
   if (v === 0.0) return 'Só Valorização';
   return v.toFixed(1);
 }
-import { fetchPontuados, postOtimizar } from '../services/api';
+import { postOtimizar } from '../services/api';
 import { saveLineup } from '../services/storage';
 
 export default function NewLineupScreen({ route, navigation }: any) {
@@ -83,7 +83,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
         response,
       };
       await saveLineup(lineup);
-      setResult(lineup);
+      navigation.navigate('LineupDetail', { lineup });
     } catch (e: any) {
       const msg = e.name === 'AbortError'
         ? 'O servidor demorou muito para responder. Tente novamente.'
@@ -94,10 +94,6 @@ export default function NewLineupScreen({ route, navigation }: any) {
       setLoading(false);
       setFeedback('');
     }
-  }
-
-  if (result) {
-    return <ResultView lineup={result} navigation={navigation} />;
   }
 
   return (
@@ -220,175 +216,6 @@ export default function NewLineupScreen({ route, navigation }: any) {
       {error !== null && (
         <Text style={styles.errorMsg}>{error}</Text>
       )}
-    </ScrollView>
-  );
-}
-
-function ResultView({
-  lineup,
-  navigation,
-}: {
-  lineup: Lineup;
-  navigation: any;
-}) {
-  const { response } = lineup;
-  const [actualScores, setActualScores] = useState<Record<string, number> | null>(null);
-
-  useEffect(() => {
-    fetchPontuados(lineup.rodada)
-      .then((data) => {
-        const scores: Record<string, number> = {};
-        for (const [id, athlete] of Object.entries(data.atletas)) {
-          scores[id] = athlete.pontuacao;
-        }
-        setActualScores(scores);
-      })
-      .catch(() => {});
-  }, [lineup.rodada]);
-
-  const getActual = (atleta_id: number): number | null => {
-    if (!actualScores) return null;
-    return actualScores[String(atleta_id)] ?? null;
-  };
-
-  const hasActual = actualScores !== null;
-
-  const allPlayers = [
-    ...response.players,
-    ...(response.tecnico ? [response.tecnico] : []),
-  ];
-  const totalReal = hasActual
-    ? allPlayers.reduce((sum, p) => sum + (getActual(p.atleta_id) ?? 0), 0)
-    : null;
-
-  const posicoes: Record<string, string> = {
-    GOL: 'Goleiro',
-    LAT: 'Lateral',
-    ZAG: 'Zagueiro',
-    MEI: 'Meia',
-    ATA: 'Atacante',
-    TEC: 'Técnico',
-  };
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      <View style={styles.resultHeader}>
-        <Text style={styles.resultTitle}>{lineup.nome}</Text>
-        <Text style={styles.resultFormacao}>
-          {response.formation} · Proj: {response.pontos_previstos.toFixed(1)} pts
-          {totalReal !== null ? ` · Real: ${totalReal.toFixed(1)} pts` : ''}
-        </Text>
-        <Text style={styles.resultOrcamento}>
-          C$ {response.orcamento_usado.toFixed(2)} usados
-          {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}${response.valorizacao_total.toFixed(2)}%` : ''}
-        </Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Titulares</Text>
-      {response.players.map((p: Player) => {
-        const real = getActual(p.atleta_id);
-        return (
-          <View key={p.atleta_id} style={styles.playerRow}>
-            <View style={styles.playerLeft}>
-              <Text style={styles.playerPos}>
-                {posicoes[p.posicao] || p.posicao}
-              </Text>
-              <Text style={styles.playerName}>
-                {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
-              </Text>
-            </View>
-            <View style={styles.playerRight}>
-              <Text style={styles.playerClub}>{p.clube}</Text>
-              <Text style={styles.playerPrice}>
-                C$ {p.preco.toFixed(2)} · {p.previsto.toFixed(1)}
-                {real !== null ? ` (${real.toFixed(1)})` : ''} pts
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.detailBtn}
-              onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}
-            >
-              <Text style={styles.detailBtnText}>i</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })}
-
-      {response.tecnico && (() => {
-        const real = getActual(response.tecnico.atleta_id);
-        return (
-          <>
-            <Text style={styles.sectionTitle}>Técnico</Text>
-            <View style={styles.tecnicoRow}>
-              <View>
-                <Text style={styles.tecnicoName}>
-                  {response.tecnico.apelido} · {response.tecnico.clube}
-                </Text>
-              </View>
-              <View style={styles.playerRight}>
-                <Text style={styles.playerClub}>
-                  C$ {response.tecnico.preco.toFixed(2)}
-                </Text>
-                <Text style={styles.playerPrice}>
-                  {response.tecnico.previsto.toFixed(1)}
-                  {real !== null ? ` (${real.toFixed(1)})` : ''} pts
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.detailBtn}
-                onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}
-              >
-                <Text style={styles.detailBtnText}>i</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        );
-      })()}
-
-      {hasActual && (
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>
-            Proj: {response.pontos_previstos.toFixed(1)} · Real: {totalReal!.toFixed(1)}
-          </Text>
-        </View>
-      )}
-
-      {Object.keys(response.reservas).length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Reservas</Text>
-          {Object.entries(response.reservas).map(([pos, r]) => (
-            <View key={pos} style={styles.reservaRow}>
-              <Text style={styles.reservaPos}>
-                {posicoes[pos] || pos}
-              </Text>
-              <Text style={styles.reservaName}>
-                {r.apelido}
-                {r.luxo ? ' ⭐' : ''}
-              </Text>
-            </View>
-          ))}
-        </>
-      )}
-
-      {response.comparacao?.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Comparação</Text>
-          {response.comparacao.map((c) => (
-            <View key={c.formacao} style={styles.compRow}>
-              <Text style={styles.compFormacao}>{c.formacao}</Text>
-              <Text style={styles.compPts}>{c.pontos_previstos.toFixed(1)} pts</Text>
-            </View>
-          ))}
-        </>
-      )}
-
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backBtnText}>Voltar</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
