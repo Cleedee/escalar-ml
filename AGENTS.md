@@ -2,14 +2,17 @@
 
 **Nome definitivo:** EscalarML (sem "Cartola" no nome).
 
-Greenfield React Native (Expo) app. No code yet — everything here is from the spec or inferred from the blank repo.
+React Native (Expo, TypeScript) app.
 
 ## Quick start
 
 ```bash
-npx create-expo-app@latest . --template blank-typescript
-npx expo install @react-navigation/native @react-navigation/bottom-tabs @react-navigation/native-stack expo-router
-npx expo install expo-secure-store expo-notifications @react-native-async-storage/async-storage
+npm install
+npx expo start             # dev server
+npx expo start --tunnel    # if on a different network
+npx expo start --web       # web version
+npx expo run:android       # build + run on Android
+npx expo run:ios           # build + run on iOS
 ```
 
 **Important:** Current SDK is **54** (Expo Go 54). Do NOT upgrade SDK without updating Expo Go on all test devices first.
@@ -17,8 +20,10 @@ npx expo install expo-secure-store expo-notifications @react-native-async-storag
 ## Stack
 
 - **App:** React Native (Expo, TypeScript)
+- **Navigation:** `@react-navigation/native` + `native-stack` + `bottom-tabs`
 - **Local storage:** AsyncStorage (ligas, times, escalações) — all user data lives on-device only
 - **Remote API:** FastAPI backend on Render (no auth, private repo)
+- **Web:** `react-native-web` + custom service worker (`web/service-worker.js`)
 
 ## API base URL
 
@@ -26,12 +31,14 @@ npx expo install expo-secure-store expo-notifications @react-native-async-storag
 https://escalar-no-cartola.onrender.com
 ```
 
+Dev override in `src/config.ts`: `http://10.22.28.62:8088` (auto-selected when `__DEV__`).
+
 **Important:** all `/cartola/*` endpoints are proxy-only (ephemeral cache). The `/otimizar` endpoint is the computation engine.
 
 ## Architecture rules
 
 - **No authentication** — API key is optional, not implemented.
-- **All user data is local** — never POST leagues/teams/lineups to the backend. Only `POST /otimizar` goes remote.
+- **All user data is local** — never POST leagues/teams/lineups to the backend. Only `POST /otimizar`, `POST /bot/escalar`, and `POST /projetar` go remote.
 - **Race condition on /otimizar** — results are ephemeral. Save the response locally immediately or it's lost.
 - **Polling for market status** — use `GET /cartola/status` periodically. Dispatch local notifications on transitions (1→abertura, 2→fechamento, 3/4→concluída). Do NOT poll from background — use expo-notifications + app-state awareness.
 
@@ -44,6 +51,38 @@ https://escalar-no-cartola.onrender.com
 | Luxury sub | 5 reserves (one per position). One has `luxo: true` (replaces worst starter post-round). |
 | Risk profiles | `neutro` (default), `agressivo` (upside), `conservador` (prefers likely starters). |
 | Budget | Always pass `orcamento` in C$ (max ~C$ 100 for most rounds). |
+| Foco | Continuous 0–1 value: `1.0` = max points, `0.0` = max valorization. |
+
+## Screens
+
+| Screen | File | Description |
+|---|---|---|
+| Status | `StatusScreen.tsx` | Market status (logo, status indicator, raw JSON, legend) |
+| Atletas | `AtletasScreen.tsx` | Athlete search, filter by position/status, sort by price/media |
+| Justificar | `JustificarScreen.tsx` | Deep dive on athlete: scout, recent performance, next match, methodology, risk profiles |
+| Help | `HelpScreen.tsx` | Explains Foco and Perfil concepts |
+| Leagues | `LeaguesScreen.tsx` | League list with create/edit/copy/delete |
+| LeagueDetail | `LeagueDetailScreen.tsx` | League detail: teams CRUD, search+import Cartola teams, bot management, escalate bot |
+| Lineups | `LineupsScreen.tsx` | Lineup list filtered by round, with team attribution links |
+| NewLineup | `NewLineupScreen.tsx` | Create lineup form (orçamento, formação, perfil, foco, switches, obrigar/excluir) |
+| LineupDetail | `LineupDetailScreen.tsx` | Lineup view: players, proj. vs real scores, duels, comparison, export JSON, delete |
+
+## Navigation
+
+```
+Tab Navigator
+├── Status (StatusScreen)
+├── Escalações (Stack)
+│   ├── LineupsList (LineupsScreen)
+│   ├── NewLineup (NewLineupScreen)
+│   ├── LineupDetail (LineupDetailScreen)
+│   ├── Justificar (JustificarScreen)
+│   └── Help (HelpScreen)
+├── Atletas (AtletasScreen)
+└── Ligas (Stack)
+    ├── LeaguesList (LeaguesScreen)
+    └── LeagueDetail (LeagueDetailScreen)
+```
 
 ## Endpoints
 
@@ -60,12 +99,23 @@ https://escalar-no-cartola.onrender.com
 | GET | `/cartola/times?q={nome}` | Search a Cartola user's team by name |
 | GET | `/cartola/time/slug/{slug}` | Get team lineup + patrimonio |
 | GET | `/cartola/time/slug/{slug}/{rodada}` | Past round lineup |
+| GET | `/cartola/time/id/{id}` | Get team lineup by numeric ID |
 
 ### Optimization
 
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/otimizar` | Generate optimized lineup |
+| POST | `/bot/escalar` | Generate lineup for bot with auto/manual strategy |
+| POST | `/projetar` | Enrich an imported Cartola lineup with projected scores/valuation |
+
+### Athletes
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/atletas?q=&posicao=&status=` | Search/filter athletes |
+| GET | `/justificar/{atleta_id}` | Athlete justification (scout, performance, methodology) |
+| GET | `/justificar?q=&clube=` | Athlete search + justification |
 
 ### Health
 
@@ -90,30 +140,178 @@ https://escalar-no-cartola.onrender.com
   "orcamento": 100,
   "formacao": "auto",
   "perfil": "neutro",
-  "modo": "max-pontos",
+  "foco": 1.0,
   "incluir_duvidosos": false,
-  "reserva_luxo": true
+  "reserva_luxo": true,
+  "forcar": false,
+  "excluir": [123, 456],
+  "obrigar": [789]
 }
 ```
 
-Response includes `formation`, `pontos_previstos`, `orcamento_usado`, `players[]` (each with `atleta_id`, `apelido`, `posicao`, `preco`, `previsto`, `clube`, `role`), `reservas` (keyed by position), and `comparacao[]` (formation alternatives).
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `orcamento` | float | 100 | Budget in C$ |
+| `formacao` | string | "auto" | "auto" or explicit ("4-3-3", "4-4-2", etc.) |
+| `perfil` | string | "neutro" | "neutro", "agressivo", "conservador" |
+| `foco` | float | 1.0 | 0–1: 1.0 = só pontuação, 0.0 = só valorização |
+| `incluir_duvidosos` | bool | false | Include doubtful-status athletes |
+| `reserva_luxo` | bool | true | Include luxury sub in response |
+| `forcar` | bool | false | Ignore cache, force refresh |
+| `excluir` | int[] | [] | Athlete IDs to exclude |
+| `obrigar` | int[] | [] | Athlete IDs to force include |
 
-## Local data model (inference — no migrations or schema yet)
+### Response
+
+```json
+{
+  "estrategia": "Manual",
+  "foco": 1.0,
+  "perfil": "neutro",
+  "formacao": "4-3-3",
+  "pontos_previstos": 86.2,
+  "orcamento_usado": 99.52,
+  "valorizacao_total": 3.45,
+  "players": [
+    {
+      "atleta_id": 117632,
+      "apelido": "Garro",
+      "posicao": "MEI",
+      "preco": 12.24,
+      "previsto": 8.21,
+      "clube": "COR",
+      "role": "capitao",
+      "media_num": 5.41,
+      "jogos_num": 15,
+      "variacao_num": 0.1,
+      "potential_valorizacao": 0.442,
+      "preco_projetado": 12.8,
+      "tendencia": "subindo",
+      "eficiencia": 0.442
+    }
+  ],
+  "tecnico": { "apelido": "...", "clube": "...", "atleta_id": 123, "preco": 7.6, "previsto": 4.2, ... },
+  "reservas": {
+    "GOL": { "apelido": "Fintelman", "preco": 6.21, "previsto": 4.12, "luxo": false, ... },
+    "LAT": { ... },
+    "ZAG": { ... },
+    "MEI": { ... },
+    "ATA": { ... }
+  },
+  "comparacao": [
+    { "formacao": "4-3-3", "pontos_previstos": 86.2, "orcamento_usado": 99.52 },
+    { "formacao": "5-3-2", "pontos_previstos": 85.48, "orcamento_usado": 98.1 }
+  ],
+  "rodada": 18
+}
+```
+
+### Enriched fields (per player/tecnico/reserva)
+
+| Field | Type | Description |
+|---|---|---|
+| `media_num` | float | Average score |
+| `jogos_num` | int | Games played |
+| `variacao_num` | float | Price variation |
+| `potential_valorizacao` | float | Valuation potential (0–1) |
+| `preco_projetado` | float | Projected next-round price |
+| `tendencia` | string | "subindo", "descendo", "estavel" |
+| `eficiencia` | float | media / preco (points per cartoleta) |
+
+## POST /bot/escalar
+
+See `BOTS.md` for full spec. Request includes league context (position, points, modalidade) and `estrategia` (auto or manual with perfil + foco). Response matches the enriched `/otimizar` shape plus `estrategia` (descriptive label).
+
+## POST /projetar shape
+
+Enriches an imported Cartola lineup with projected scores and valuation data.
+
+```json
+{
+  "atletas": [117632, 123456],
+  "tecnico_id": 789012,
+  "capitao_id": 117632,
+  "rodada": 19,
+  "forcar": false,
+  "preco_compra": { "117632": 10.5 }
+}
+```
+
+| Param | Type | Description |
+|---|---|---|
+| `atletas` | int[] | IDs of field athletes (starters + bench) |
+| `tecnico_id` | int | Coach athlete ID (0 if none) |
+| `capitao_id` | int | Captain athlete ID |
+| `rodada` | int | Current round |
+| `forcar` | bool | Ignore cache |
+| `preco_compra` | object | Map of athlete_id → purchase price (for valuation calc) |
+
+### Response
+
+Same enriched `OtimizarResponse` shape. Only `jogadores` (starters) and `tecnico` are enriched; `reservas` are not returned by this endpoint.
+
+## Local data model
 
 Store as JSON in AsyncStorage:
 
-- **leagues:** `{ id, nome, rodada_inicial, rodada_final, modalidade: "patrimonio"|"pontuacao", times: Team[] }`
-- **teams:** `{ id, nome, slug?, time_id?, is_user: boolean }`
-- **lineups:** `{ id, nome, atribuido_a_team_id?, created_at, response: <POST /otimizar response> }`
-- **settings:** `{ meu_time_id?, notifications_enabled: boolean }`
+- **leagues:** `{ id, nome, rodada_inicial, rodada_final, modalidade: "patrimonio"|"pontuacao", times: Team[], created_at }`
+- **lineups:** `{ id, nome, rodada, atribuido_a_team_id?, created_at, params?: OtimizarParams, response: OtimizarResponse, estrategia? }`
+
+### Team interface (within leagues)
+
+```typescript
+{
+  id: string;
+  nome: string;
+  proprietario: string;
+  time_id?: string;       // Cartola time ID
+  slug?: string;           // Cartola slug
+  patrimonio: number;
+  ranking: number;
+  total_acumulado: number;
+  is_user: boolean;
+  is_bot?: boolean;
+  cartoletas_iniciais?: number;
+  posicao?: number;
+  ativo?: boolean;
+  estrategia?: 'auto' | 'manual';
+  foco?: number;
+  perfil?: 'neutro' | 'agressivo' | 'conservador';
+}
+```
+
+## Features not in spec
+
+### Cartola team import (`mapCartolaToLineup`)
+Called from `LeagueDetailScreen`. Converts `CartolaTeamResponse` into a `Lineup`.  
+**Fix:** After mapping, `handleImportTeam` now calls `POST /projetar` to enrich the lineup with `preco_projetado`, `potential_valorizacao`, and `valorizacao_total`. Reservas still get the old hardcoded values (they are not enriched by `/projetar`).  
+→ See `src/screens/LeagueDetailScreen.tsx:30-123` (base map), `src/screens/LeagueDetailScreen.tsx:241-263` (enrichment flow).
+
+### Bot management
+Bots in leagues can be configured with strategy (auto/manual), foco, and perfil. `LeagueDetailScreen` lets you manage bots and escalate them via `POST /bot/escalar`.
+
+### Actual scores in LineupDetail
+`LineupDetailScreen` fetches `GET /cartola/pontuados/{rodada}` and `GET /cartola/partidas/{rodada}` to show real vs projected scores and match duels.
+
+### Export JSON
+LineupDetailScreen has an "Exportar JSON" button that copies the full lineup as JSON to the clipboard via `expo-clipboard`.
+
+### Athlete justification flow
+From any player in a lineup, tapping the "i" button navigates to `JustificarScreen` which calls `GET /justificar` to show deep scout data, recent performance bar chart, next match info, methodology, and per-profile analysis.
+
+### Forçar / Obrigar / Excluir
+The `NewLineupScreen` allows forcing specific athletes (`obrigar`) or excluding them (`excluir`) via comma-separated IDs, with a search modal to find athletes by name.
 
 ## Development
 
 ```bash
-npx expo start        # dev server
-npx expo start --tunnel  # if on a different network
-npx expo run:android  # build + run on Android
-npx expo run:ios      # build + run on iOS
+npm install
+npx expo start              # dev server
+npx expo start --tunnel     # if on a different network
+npx expo start --web        # web version
+npx expo run:android        # build + run on Android
+npx expo run:ios            # build + run on iOS
+npm run build:web           # export web + copy service worker
 ```
 
 There are no lint, test, or typecheck commands yet — add them as the project grows.

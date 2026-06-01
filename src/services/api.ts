@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, ProjetarRequest, ProjetarResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 export async function fetchStatus(): Promise<MarketStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
@@ -90,6 +90,16 @@ export async function fetchPartidas(rodada: number): Promise<PartidasResponse> {
 
 export async function postBotEscalar(params: BotEscalarRequest): Promise<BotEscalarResponse> {
   const res = await fetch(`${API_BASE}/bot/escalar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function postProjetar(params: ProjetarRequest): Promise<ProjetarResponse> {
+  const res = await fetch(`${API_BASE}/projetar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),

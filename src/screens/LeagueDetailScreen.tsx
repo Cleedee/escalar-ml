@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, Reserva, TeamSearchResult, Tecnico, Team } from '../types';
-import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar } from '../services/api';
+import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, TeamSearchResult, Tecnico, Team } from '../types';
+import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
@@ -242,7 +242,38 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         fetchTeamById(team.time_id!),
         fetchClubes(),
       ]);
+
+      const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
+      const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
+      const precoCompra: Record<number, number> = {};
+      for (const a of teamData.atletas) {
+        precoCompra[a.atleta_id] = a.preco_num;
+      }
+
+      const projetada = await postProjetar({
+        atletas: fieldAtletas.map((a) => a.atleta_id),
+        tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
+        capitao_id: teamData.capitao_id,
+        rodada: rodadaAtual,
+        forcar: false,
+        preco_compra: precoCompra,
+      });
+
       const lineup = mapCartolaToLineup(teamData, clubes, rodadaAtual);
+
+      lineup.response.players = lineup.response.players.map((p) => {
+        const enriched = projetada.jogadores.find((j) => j.atleta_id === p.atleta_id);
+        return enriched ? { ...p, ...enriched } : p;
+      });
+
+      const tecEnriched = projetada.tecnico;
+      if (tecEnriched?.atleta_id) {
+        Object.assign(lineup.response.tecnico, tecEnriched);
+      }
+
+      lineup.response.pontos_previstos = projetada.pontos_previstos;
+      lineup.response.valorizacao_total = projetada.valorizacao_total;
+
       lineup.atribuido_a_team_id = team.id;
       lineup.nome = `${team.nome} (importado)`;
       await saveLineup(lineup);

@@ -364,6 +364,22 @@ export interface CartolaTeamResponse {
   time: { nome_cartola: string; slug: string; time_id: number };
 }
 
+export interface ProjetarRequest {
+  atletas: number[];
+  tecnico_id: number;
+  capitao_id: number;
+  rodada: number;
+  forcar?: boolean;
+  preco_compra?: Record<number, number>;
+}
+
+export interface ProjetarResponse {
+  pontos_previstos: number;
+  valorizacao_total: number;
+  jogadores: Player[];
+  tecnico: Tecnico;
+}
+
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
   1: { label: 'Mercado Aberto', color: '#22c55e' },
   2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },
