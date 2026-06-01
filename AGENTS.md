@@ -31,7 +31,7 @@ npx expo run:ios           # build + run on iOS
 https://escalar-no-cartola.onrender.com
 ```
 
-Dev override in `src/config.ts`: `http://10.22.28.62:8088` (auto-selected when `__DEV__`).
+Dev override in `src/config.ts`: `https://escalar-no-cartola.onrender.com` (auto-selected when `__DEV__`). Set to `http://127.0.0.1:8000` for local backend.
 
 **Important:** all `/cartola/*` endpoints are proxy-only (ephemeral cache). The `/otimizar` endpoint is the computation engine.
 

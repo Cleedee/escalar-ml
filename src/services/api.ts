@@ -1,6 +1,20 @@
 import { API_BASE } from '../config';
 import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, ProjetarRequest, ProjetarResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
+const RETRYABLE_CODES = new Set([502, 503, 504]);
+
+async function fetchWithRetry(url: string, opts?: RequestInit, maxRetries = 3): Promise<Response> {
+  for (let i = 0; i < maxRetries; i++) {
+    const res = await fetch(url, opts);
+    if (res.ok) return res;
+    if (!RETRYABLE_CODES.has(res.status)) throw new Error(`HTTP ${res.status}`);
+    if (i < maxRetries - 1) {
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+  throw new Error(`HTTP after retries`);
+}
+
 export async function fetchStatus(): Promise<MarketStatus> {
   const res = await fetch(`${API_BASE}/cartola/status`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -53,20 +67,17 @@ export async function postOtimizar(params: OtimizarParams): Promise<OtimizarResp
 }
 
 export async function fetchTeams(q: string): Promise<TeamSearchResult[]> {
-  const res = await fetch(`${API_BASE}/cartola/times?q=${encodeURIComponent(q)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetchWithRetry(`${API_BASE}/cartola/times?q=${encodeURIComponent(q)}`);
   return res.json();
 }
 
 export async function fetchTeamBySlug(slug: string): Promise<TeamDetailResponse> {
-  const res = await fetch(`${API_BASE}/cartola/time/slug/${encodeURIComponent(slug)}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetchWithRetry(`${API_BASE}/cartola/time/slug/${encodeURIComponent(slug)}`);
   return res.json();
 }
 
 export async function fetchTeamById(timeId: string | number): Promise<CartolaTeamResponse> {
-  const res = await fetch(`${API_BASE}/cartola/time/id/${timeId}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetchWithRetry(`${API_BASE}/cartola/time/id/${timeId}`);
   return res.json();
 }
 

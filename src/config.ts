@@ -1,5 +1,5 @@
 const ENV = {
-  dev: { API_BASE: 'http://10.22.28.62:8088' },
+  dev: { API_BASE: 'https://escalar-no-cartola.onrender.com' },
   prod: { API_BASE: 'https://escalar-no-cartola.onrender.com' },
 };
 
