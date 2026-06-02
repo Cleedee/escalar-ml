@@ -147,14 +147,24 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
   const [botLoading, setBotLoading] = useState(false);
   const [rodadaAtual, setRodadaAtual] = useState(1);
+  const [rodadaSelecionada, setRodadaSelecionada] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
   const [editFoco, setEditFoco] = useState(1.0);
   const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
   const [lineups, setLineups] = useState<Lineup[]>([]);
+  const firstFocus = useRef(true);
 
   useFocusEffect(
     useCallback(() => {
-      fetchStatus().then((s) => setRodadaAtual(s.rodada_atual)).catch(() => {});
+      fetchStatus()
+        .then((s) => {
+          setRodadaAtual(s.rodada_atual);
+          if (firstFocus.current) {
+            setRodadaSelecionada(s.rodada_atual);
+            firstFocus.current = false;
+          }
+        })
+        .catch(() => {});
       getLineups().then(setLineups).catch(() => {});
     }, [])
   );
@@ -165,6 +175,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
   const modalidade = league.modalidade;
   const sorted = [...league.times].sort((a, b) => b.total_acumulado - a.total_acumulado);
+
+  const changeRodada = (delta: number) => {
+    const nova = rodadaSelecionada + delta;
+    if (nova >= league.rodada_inicial && nova <= league.rodada_final) setRodadaSelecionada(nova);
+  };
 
   const openNew = () => {
     setEditTeamId(null);
@@ -504,8 +519,28 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         </Text>
       </View>
 
+      <View style={styles.rodadaRow}>
+        <TouchableOpacity onPress={() => changeRodada(-1)} style={styles.arrow}>
+          <Text style={styles.arrowText}>{'<'}</Text>
+        </TouchableOpacity>
+        <View style={styles.rodadaInfo}>
+          <Text style={styles.rodadaLabel}>Rodada</Text>
+          <Text style={styles.rodadaValue}>{rodadaSelecionada}</Text>
+        </View>
+        <TouchableOpacity onPress={() => changeRodada(1)} style={styles.arrow}>
+          <Text style={styles.arrowText}>{'>'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setRodadaSelecionada(rodadaAtual)}
+          style={styles.atualBtn}
+        >
+          <Text style={styles.atualBtnText}>Atual</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={sorted}
+        extraData={rodadaSelecionada}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
@@ -540,7 +575,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
             <View style={styles.teamActions}>
               {(() => {
-                const teamLineup = lineups.find((l) => l.atribuido_a_team_id === item.id && l.rodada === rodadaAtual);
+                const teamLineup = lineups.find((l) => l.atribuido_a_team_id === item.id && l.rodada === rodadaSelecionada);
                 return teamLineup ? (
                   <TouchableOpacity style={styles.lineupActionBtn} onPress={() => navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup: teamLineup } })}>
                     <Text style={styles.lineupActionBtnText}>📋</Text>
@@ -1322,5 +1357,51 @@ const styles = StyleSheet.create({
   pesoActive: {
     borderColor: theme.colors.info,
     backgroundColor: theme.colors.infoGlow,
+  },
+  rodadaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  arrow: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowText: {
+    fontSize: theme.fontSize['3xl'],
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  rodadaInfo: {
+    alignItems: 'center',
+    marginHorizontal: theme.spacing.lg,
+  },
+  rodadaLabel: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  rodadaValue: {
+    fontSize: theme.fontSize['4xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+  },
+  atualBtn: {
+    marginLeft: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  atualBtnText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
   },
 });
