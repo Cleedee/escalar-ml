@@ -3,7 +3,7 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import * as Clipboard from 'expo-clipboard';
 import { Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
 import { deleteLineup, getLeagues, saveLeague, saveLineup } from '../services/storage';
-import { fetchPontuados, fetchPartidas } from '../services/api';
+import { fetchPontuados, fetchPartidas, postProjetar } from '../services/api';
 import { calcularSubstituicoes } from '../services/substituicaoEngine';
 import { theme } from '../theme';
 import Card from '../components/Card';
@@ -28,6 +28,44 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [substituicaoResult, setSubstituicaoResult] = useState<SubstituicaoResult | null>(null);
   const [salvandoSubstituicao, setSalvandoSubstituicao] = useState(false);
+  const [projetando, setProjetando] = useState(false);
+
+  const handleProjetar = async () => {
+    setProjetando(true);
+    try {
+      const capitaoId = response.players.find((p: Player) => p.role === 'capitao')?.atleta_id;
+      const request = {
+        atletas: response.players.map((p: Player) => p.atleta_id),
+        tecnico_id: response.tecnico?.atleta_id ?? 0,
+        capitao_id: capitaoId ?? 0,
+        rodada: lineup.rodada,
+        forcar: false,
+      };
+      const result = await postProjetar(request);
+
+      const enrichedPlayers = response.players.map((p: Player) => {
+        const enriched = result.jogadores.find((j) => j.atleta_id === p.atleta_id);
+        return enriched ? { ...p, ...enriched, role: p.role } : p;
+      });
+
+      const updatedResponse = {
+        ...response,
+        pontos_previstos: result.pontos_previstos,
+        valorizacao_total: result.valorizacao_total,
+        players: enrichedPlayers,
+        tecnico: result.tecnico ?? response.tecnico,
+      };
+
+      const updatedLineup = { ...lineup, response: updatedResponse };
+
+      await saveLineup(updatedLineup);
+      navigation.replace('LineupDetail', { lineup: updatedLineup });
+    } catch {
+      Alert.alert('Erro', 'Não foi possível atualizar as projeções.');
+    } finally {
+      setProjetando(false);
+    }
+  };
 
   const handleDelete = async () => {
     setShowDeleteModal(false);
@@ -535,7 +573,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         />
       )}
 
-      <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
+      <Button variant="outline" label={projetando ? "Projetando..." : "Atualizar projeções"} onPress={handleProjetar} disabled={projetando} />
 
       <Button
         variant="primary"
@@ -556,9 +594,12 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         }
       />
 
-      <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
+      <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
 
-      <Button variant="danger" label="Excluir escalação" onPress={() => setShowDeleteModal(true)} />
+      <View style={styles.bottomButtons}>
+        <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
+        <Button variant="danger" label="Excluir escalação" onPress={() => setShowDeleteModal(true)} />
+      </View>
 
       <Modal visible={showDeleteModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -874,5 +915,10 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  bottomButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.lg,
   },
 });
