@@ -103,7 +103,7 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
   const ataCount = players.filter((p) => p.posicao === 'ATA').length;
 
   const response: OtimizarResponse = {
-    formation: `${defCount}-${meiCount}-${ataCount}`,
+    formacao: `${defCount}-${meiCount}-${ataCount}`,
     pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + tecnico.previsto,
     orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + tecnico.preco,
     players,
@@ -417,7 +417,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         reserva_luxo: true,
       },
       response: {
-        formation: botRes.formacao,
+        formacao: botRes.formacao,
         pontos_previstos: botRes.pontos_previstos,
         orcamento_usado: botRes.orcamento_usado,
         players: botRes.players.map(mapPlayer),

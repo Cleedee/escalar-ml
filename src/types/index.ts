@@ -59,7 +59,7 @@ export interface Tecnico {
 }
 
 export interface OtimizarResponse {
-  formation: string;
+  formacao: string;
   pontos_previstos: number;
   orcamento_usado: number;
   players: Player[];

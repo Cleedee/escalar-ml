@@ -127,7 +127,7 @@ export default function LineupsScreen({ navigation }: any) {
                 </Text>
               )}
               <Text style={styles.cardFormacao}>
-                {item.response.formation} · {item.response.pontos_previstos.toFixed(1)} pts
+                {item.response.formacao} · {item.response.pontos_previstos.toFixed(1)} pts
               </Text>
               <View style={styles.cardPlayers}>
                 {item.response.players.slice(0, 5).map((p) => (

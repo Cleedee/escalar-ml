@@ -97,7 +97,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         <Text style={styles.resultTitle}>{lineup.nome}</Text>
         <Text style={styles.resultRodada}>Rodada {lineup.rodada}</Text>
         <Text style={styles.resultEsquema}>
-          Esquema tático: {response.formation}
+          Esquema tático: {response.formacao}
         </Text>
         <Text style={styles.resultFormacao}>
           Proj: {response.pontos_previstos.toFixed(1)} pts
