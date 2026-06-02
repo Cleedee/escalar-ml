@@ -135,18 +135,34 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       // Update team in league if linked
       if (lineup.atribuido_a_team_id) {
+        const todosTitulares = [
+          ...novosPlayers,
+          ...(response.tecnico ? [response.tecnico] : []),
+        ];
+
+        const valorizacaoTotal = todosTitulares.reduce(
+          (sum, p) => sum + Math.max(0, (p.preco_projetado ?? p.preco) - p.preco),
+          0,
+        );
+
+        const pontuacaoTotal = todosTitulares.reduce(
+          (sum, p) => sum + (getPontuacao(p.atleta_id) ?? 0),
+          0,
+        );
+
         const leagues = await getLeagues();
         for (const league of leagues) {
           const teamIdx = league.times.findIndex((t) => t.id === lineup.atribuido_a_team_id);
           if (teamIdx === -1) continue;
 
           const team = { ...league.times[teamIdx] };
-          const ganhoPontos = substituicaoResult.pontos_finais - substituicaoResult.pontos_originais;
 
-          team.patrimonio += substituicaoResult.patrimonio_ajuste;
+          team.patrimonio += valorizacaoTotal;
 
-          if (league.modalidade === 'pontuacao') {
-            team.ranking = Math.max(0, team.ranking + ganhoPontos);
+          if (league.modalidade === 'patrimonio') {
+            team.ranking += valorizacaoTotal;
+          } else {
+            team.ranking += pontuacaoTotal;
           }
 
           team.total_acumulado = league.modalidade === 'patrimonio'
