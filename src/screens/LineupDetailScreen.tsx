@@ -96,8 +96,11 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       <View style={styles.resultHeader}>
         <Text style={styles.resultTitle}>{lineup.nome}</Text>
         <Text style={styles.resultRodada}>Rodada {lineup.rodada}</Text>
+        <Text style={styles.resultEsquema}>
+          Esquema tático: {response.formation}
+        </Text>
         <Text style={styles.resultFormacao}>
-          {response.formation} · Proj: {response.pontos_previstos.toFixed(1)} pts
+          Proj: {response.pontos_previstos.toFixed(1)} pts
           {totalReal !== null ? ` · Real: ${totalReal.toFixed(1)} pts` : ''}
         </Text>
         <Text style={styles.resultOrcamento}>
@@ -391,9 +394,13 @@ const styles = StyleSheet.create({
   },
   resultFormacao: {
     fontSize: 14,
+    color: '#94a3b8',
+  },
+  resultEsquema: {
+    fontSize: 14,
     color: '#22c55e',
-    marginTop: 4,
     fontWeight: '600',
+    marginBottom: 2,
   },
   resultOrcamento: {
     fontSize: 13,
