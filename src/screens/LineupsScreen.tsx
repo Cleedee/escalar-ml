@@ -12,6 +12,10 @@ import { League, Lineup } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
 import { getLeagues, getLineupsByRodada } from '../services/storage';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
 
 export default function LineupsScreen({ navigation }: any) {
   const [lineups, setLineups] = useState<Lineup[]>([]);
@@ -85,17 +89,12 @@ export default function LineupsScreen({ navigation }: any) {
             <Text style={styles.atualBtnText}>Atual</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.novaBtn}
-          onPress={() => navigation.navigate('NewLineup', { rodada })}
-        >
-          <Text style={styles.novaBtnText}>+ Nova</Text>
-        </TouchableOpacity>
+        <Button variant="primary" label="+ Nova" onPress={() => navigation.navigate('NewLineup', { rodada })} />
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : lineups.length === 0 ? (
         <View style={styles.center}>
@@ -112,45 +111,47 @@ export default function LineupsScreen({ navigation }: any) {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
               onPress={() =>
                 navigation.navigate('LineupDetail', { lineup: item })
               }
+              activeOpacity={0.7}
             >
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardNome}>{item.nome}</Text>
-                <Text style={styles.cardRodada}>R{item.rodada}</Text>
-              </View>
-              {item.atribuido_a_team_id && teamLookup[item.atribuido_a_team_id] && (
-                <Text style={styles.cardTeam}>
-                  {teamLookup[item.atribuido_a_team_id].team} · {teamLookup[item.atribuido_a_team_id].league}
-                </Text>
-              )}
-              <Text style={styles.cardFormacao}>
-                {item.response.formacao} · {item.response.pontos_previstos.toFixed(1)} pts
-              </Text>
-              <View style={styles.cardPlayers}>
-                {item.response.players.slice(0, 5).map((p) => (
-                  <Text key={p.atleta_id} style={styles.cardPlayer}>
-                    {p.apelido} · {p.clube}
-                    {p.role === 'capitao' ? ' (C)' : ''}
-                  </Text>
-                ))}
-                {item.response.players.length > 5 && (
-                  <Text style={styles.cardMore}>
-                    +{item.response.players.length - 5} jogadores
+              <Card>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardNome}>{item.nome}</Text>
+                  <Badge label={`R${item.rodada}`} variant="primary" />
+                </View>
+                {item.atribuido_a_team_id && teamLookup[item.atribuido_a_team_id] && (
+                  <Text style={styles.cardTeam}>
+                    {teamLookup[item.atribuido_a_team_id].team} · {teamLookup[item.atribuido_a_team_id].league}
                   </Text>
                 )}
-              </View>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardDate}>
-                  {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                <Text style={styles.cardFormacao}>
+                  {item.response.formacao} · {item.response.pontos_previstos.toFixed(1)} pts
                 </Text>
-                <Text style={styles.cardOrcamento}>
-                  C$ {item.response.orcamento_usado.toFixed(2)} usados
-                  {item.params?.orcamento != null ? ` (patrimônio C$ ${item.params.orcamento.toFixed(2)})` : ''}
-                </Text>
-              </View>
+                <View style={styles.cardPlayers}>
+                  {item.response.players.slice(0, 5).map((p) => (
+                    <Text key={p.atleta_id} style={styles.cardPlayer}>
+                      {p.apelido} · {p.clube}
+                      {p.role === 'capitao' ? ' (C)' : ''}
+                    </Text>
+                  ))}
+                  {item.response.players.length > 5 && (
+                    <Text style={styles.cardMore}>
+                      +{item.response.players.length - 5} jogadores
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.cardFooter}>
+                  <Text style={styles.cardDate}>
+                    {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                  </Text>
+                  <Text style={styles.cardOrcamento}>
+                    C$ {item.response.orcamento_usado.toFixed(2)} usados
+                    {item.params?.orcamento != null ? ` (patrimônio C$ ${item.params.orcamento.toFixed(2)})` : ''}
+                  </Text>
+                </View>
+              </Card>
             </TouchableOpacity>
           )}
         />
@@ -166,21 +167,21 @@ export default function LineupsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.bg,
   },
   wrapper: {
     flex: 1,
   },
   header: {
-    paddingTop: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.sm,
   },
   rodadaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   arrow: {
     width: 40,
@@ -189,136 +190,114 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   arrowText: {
-    fontSize: 22,
-    color: '#94a3b8',
-    fontWeight: '600',
+    fontSize: theme.fontSize['3xl'],
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fontWeight.semibold,
   },
   rodadaInfo: {
     alignItems: 'center',
-    marginHorizontal: 16,
+    marginHorizontal: theme.spacing.lg,
   },
   rodadaLabel: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   rodadaValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize['4xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   atualBtn: {
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    marginLeft: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#22c55e',
+    borderColor: theme.colors.primary,
   },
   atualBtnText: {
-    color: '#22c55e',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  novaBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  novaBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
   },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing['2xl'],
   },
   emptyIcon: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 12,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.borderLight,
+    marginBottom: theme.spacing.md,
   },
   emptyText: {
-    color: '#64748b',
-    fontSize: 15,
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSize.md,
     textAlign: 'center',
   },
   list: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing['3xl'],
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   cardNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
-  },
-  cardRodada: {
-    fontSize: 13,
-    color: '#22c55e',
-    fontWeight: '600',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.text,
   },
   cardTeam: {
-    fontSize: 12,
-    color: '#f97316',
-    marginBottom: 4,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.warning,
+    marginBottom: theme.spacing.xs,
   },
   cardFormacao: {
-    fontSize: 13,
-    color: '#94a3b8',
-    marginBottom: 8,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
   },
   cardPlayers: {
     gap: 2,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   cardPlayer: {
-    fontSize: 13,
-    color: '#cbd5e1',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   cardMore: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingTop: 8,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.sm,
   },
   cardDate: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
   },
   listFooter: {
-    paddingVertical: 12,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   listFooterText: {
-    fontSize: 11,
-    color: '#22c55e',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.primary,
   },
   cardOrcamento: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
   },
 });

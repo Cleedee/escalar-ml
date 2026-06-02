@@ -4,6 +4,11 @@ import * as Clipboard from 'expo-clipboard';
 import { Player, Reserva, PartidasResponse } from '../types';
 import { deleteLineup } from '../services/storage';
 import { fetchPontuados, fetchPartidas } from '../services/api';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
 
 const posicoes: Record<string, string> = {
   GOL: 'Goleiro',
@@ -93,7 +98,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      <View style={styles.resultHeader}>
+      <Card style={styles.resultHeader}>
         <Text style={styles.resultTitle}>{lineup.nome}</Text>
         <Text style={styles.resultRodada}>Rodada {lineup.rodada}</Text>
         <Text style={styles.resultEsquema}>
@@ -108,10 +113,10 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           {lineup.params?.orcamento != null ? ` (patrimônio C$ ${lineup.params.orcamento.toFixed(2)})` : ''}
           {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}C$ ${response.valorizacao_total.toFixed(2)}` : ''}
         </Text>
-      </View>
+      </Card>
 
       {lineup.params?.foco != null && (
-        <View style={styles.paramsBox}>
+        <Card elevated style={styles.paramsBox}>
           <Text style={styles.paramsTitle}>Parâmetros da otimização</Text>
           <View style={styles.paramsRow}>
             <Text style={styles.paramsLabel}>Foco</Text>
@@ -136,19 +141,19 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           {response.valorizacao_total != null && (
             <View style={styles.paramsRow}>
               <Text style={styles.paramsLabel}>Valorização proj.</Text>
-              <Text style={[styles.paramsValue, { color: '#3b82f6' }]}>
+              <Text style={[styles.paramsValue, { color: theme.colors.info }]}>
                 {response.valorizacao_total >= 0 ? '+' : ''}C$ {response.valorizacao_total.toFixed(2)}
               </Text>
             </View>
           )}
-        </View>
+        </Card>
       )}
 
-      <Text style={styles.sectionTitle}>Titulares</Text>
+      <SectionHeader label="Titulares" />
       {response.players.map((p: Player) => {
         const real = getActual(p.atleta_id);
         return (
-          <View key={p.atleta_id} style={styles.playerRow}>
+          <Card key={p.atleta_id} style={styles.playerCard}>
             <View style={styles.playerTop}>
               <View>
                 <Text style={styles.playerPos}>
@@ -181,13 +186,13 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 <Text style={styles.playerStatLabel}>Projeção</Text>
               </View>
               <View style={styles.playerStat}>
-                <Text style={[styles.playerStatValue, { color: '#3b82f6' }]}>
+                <Text style={[styles.playerStatValue, { color: theme.colors.info }]}>
                   {p.preco_projetado != null ? `${(p.preco_projetado - p.preco) >= 0 ? '+' : ''}C$ ${(p.preco_projetado - p.preco).toFixed(2)}` : '—'}
                 </Text>
                 <Text style={styles.playerStatLabel}>Valorização</Text>
               </View>
             </View>
-          </View>
+          </Card>
         );
       })}
 
@@ -195,84 +200,86 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         const real = getActual(response.tecnico.atleta_id);
         return (
           <>
-            <Text style={styles.sectionTitle}>Técnico</Text>
-            <View style={styles.tecnicoRow}>
-              <View>
-                <Text style={styles.tecnicoName}>
-                  {response.tecnico.apelido} · {response.tecnico.clube}
-                </Text>
-                {getDuelo(response.tecnico.clube) && (
-                  <Text style={styles.dueloText}>{getDuelo(response.tecnico.clube)}</Text>
-                )}
+            <SectionHeader label="Técnico" />
+            <Card style={styles.tecnicoCard}>
+              <View style={styles.tecnicoRow}>
+                <View>
+                  <Text style={styles.tecnicoName}>
+                    {response.tecnico.apelido} · {response.tecnico.clube}
+                  </Text>
+                  {getDuelo(response.tecnico.clube) && (
+                    <Text style={styles.dueloText}>{getDuelo(response.tecnico.clube)}</Text>
+                  )}
+                </View>
+                <View style={styles.playerRight}>
+                  <Text style={styles.playerClub}>
+                    C$ {response.tecnico.preco.toFixed(2)}
+                  </Text>
+                  <Text style={styles.tecnicoPts}>
+                    {response.tecnico.previsto.toFixed(1)}
+                    {real !== null ? ` (${real.toFixed(1)})` : ''} pts
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.detailBtn}
+                  onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}
+                >
+                  <Text style={styles.detailBtnText}>i</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.playerRight}>
-                <Text style={styles.playerClub}>
-                  C$ {response.tecnico.preco.toFixed(2)}
-                </Text>
-                <Text style={styles.tecnicoPts}>
-                  {response.tecnico.previsto.toFixed(1)}
-                  {real !== null ? ` (${real.toFixed(1)})` : ''} pts
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.detailBtn}
-                onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}
-              >
-                <Text style={styles.detailBtnText}>i</Text>
-              </TouchableOpacity>
-            </View>
+            </Card>
           </>
         );
       })()}
 
       {hasActual && (
-        <View style={styles.totalRow}>
+        <Card highlight style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>
             Proj: {response.pontos_previstos.toFixed(1)} · Real: {totalReal!.toFixed(1)}
           </Text>
-        </View>
+        </Card>
       )}
 
-          {Object.keys(response.reservas).length > 0 && (
+      {Object.keys(response.reservas).length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Reservas</Text>
+          <SectionHeader label="Reservas" />
           {Object.entries(response.reservas).map(([pos, r]) => {
             const reserva = r as Reserva;
             return (
-            <View key={pos} style={styles.reservaCard}>
-              <View style={styles.reservaTop}>
-                <View>
-                  <Text style={styles.reservaPos}>
-                    {posicoes[pos] || pos}{reserva.luxo ? ' ⭐' : ''}
-                  </Text>
-                  <Text style={styles.reservaName}>
-                    {reserva.apelido} · {reserva.clube}
-                  </Text>
-                  {getDuelo(reserva.clube) && (
-                    <Text style={styles.dueloText}>{getDuelo(reserva.clube)}</Text>
-                  )}
+              <Card key={pos}>
+                <View style={styles.reservaTop}>
+                  <View>
+                    <Text style={styles.reservaPos}>
+                      {posicoes[pos] || pos}{reserva.luxo ? ' ⭐' : ''}
+                    </Text>
+                    <Text style={styles.reservaName}>
+                      {reserva.apelido} · {reserva.clube}
+                    </Text>
+                    {getDuelo(reserva.clube) && (
+                      <Text style={styles.dueloText}>{getDuelo(reserva.clube)}</Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-              <View style={styles.reservaStats}>
-                <View style={styles.playerStat}>
-                  <Text style={styles.playerStatValue}>C$ {reserva.preco.toFixed(2)}</Text>
-                  <Text style={styles.playerStatLabel}>Preço</Text>
+                <View style={styles.reservaStats}>
+                  <View style={styles.playerStat}>
+                    <Text style={styles.playerStatValue}>C$ {reserva.preco.toFixed(2)}</Text>
+                    <Text style={styles.playerStatLabel}>Preço</Text>
+                  </View>
+                  <View style={styles.playerStat}>
+                    <Text style={styles.playerStatValue}>{reserva.previsto.toFixed(1)}</Text>
+                    <Text style={styles.playerStatLabel}>Projeção</Text>
+                  </View>
+                  <View style={styles.playerStat}>
+                    <Text style={[styles.playerStatValue, { color: theme.colors.info }]}>
+                      {reserva.preco_projetado != null
+                        ? `${(reserva.preco_projetado - reserva.preco) >= 0 ? '+' : ''}C$ ${(reserva.preco_projetado - reserva.preco).toFixed(2)}`
+                        : '—'}
+                    </Text>
+                    <Text style={styles.playerStatLabel}>Valorização</Text>
+                  </View>
                 </View>
-                <View style={styles.playerStat}>
-                  <Text style={styles.playerStatValue}>{reserva.previsto.toFixed(1)}</Text>
-                  <Text style={styles.playerStatLabel}>Projeção</Text>
-                </View>
-                <View style={styles.playerStat}>
-                  <Text style={[styles.playerStatValue, { color: '#3b82f6' }]}>
-                    {reserva.preco_projetado != null
-                      ? `${(reserva.preco_projetado - reserva.preco) >= 0 ? '+' : ''}C$ ${(reserva.preco_projetado - reserva.preco).toFixed(2)}`
-                      : '—'}
-                  </Text>
-                  <Text style={styles.playerStatLabel}>Valorização</Text>
-                </View>
-              </View>
-            </View>
+              </Card>
             );
           })}
         </>
@@ -280,25 +287,21 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       {response.comparacao?.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Comparação</Text>
+          <SectionHeader label="Comparação" />
           {response.comparacao.map((c: any) => (
-            <View key={c.formacao} style={styles.compRow}>
+            <Card key={c.formacao} style={styles.compRow}>
               <Text style={styles.compFormacao}>{c.formacao}</Text>
               <Text style={styles.compPts}>{c.pontos_previstos.toFixed(1)} pts</Text>
-            </View>
+            </Card>
           ))}
         </>
       )}
 
-      <TouchableOpacity
-        style={styles.exportBtn}
-        onPress={handleExportJson}
-      >
-        <Text style={styles.exportBtnText}>Exportar JSON</Text>
-      </TouchableOpacity>
+      <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
 
-      <TouchableOpacity
-        style={styles.newBtn}
+      <Button
+        variant="primary"
+        label="Gerar nova escalação"
         onPress={() =>
           navigation.navigate('NewLineup', {
             rodada: lineup.rodada,
@@ -313,23 +316,11 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             excluirText: (lineup.params?.excluir ?? []).join(','),
           })
         }
-      >
-        <Text style={styles.newBtnText}>Gerar nova escalação</Text>
-      </TouchableOpacity>
+      />
 
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backBtnText}>Voltar</Text>
-      </TouchableOpacity>
+      <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
 
-      <TouchableOpacity
-        style={styles.deleteBtn}
-        onPress={() => setShowDeleteModal(true)}
-      >
-        <Text style={styles.deleteBtnText}>Excluir escalação</Text>
-      </TouchableOpacity>
+      <Button variant="danger" label="Excluir escalação" onPress={() => setShowDeleteModal(true)} />
 
       <Modal visible={showDeleteModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -362,352 +353,266 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.bg,
   },
   inner: {
-    padding: 20,
+    padding: theme.spacing.xl,
     paddingBottom: 40,
   },
   resultHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: theme.spacing['2xl'],
   },
   paramsBox: {
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
+    marginBottom: theme.spacing.lg,
   },
   paramsTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: theme.spacing.md,
   },
   paramsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: theme.spacing.sm,
   },
   paramsLabel: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   paramsValue: {
-    fontSize: 13,
-    color: '#f8fafc',
-    fontWeight: '600',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
   },
   resultTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize['2xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   resultRodada: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 2,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   resultFormacao: {
-    fontSize: 14,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   resultEsquema: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+    marginBottom: theme.spacing.xs,
   },
   resultOrcamento: {
-    fontSize: 13,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 20,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   detailBtn: {
     position: 'absolute',
-    right: 8,
-    top: 8,
+    right: theme.spacing.sm,
+    top: theme.spacing.sm,
     width: 22,
     height: 22,
-    borderRadius: 11,
-    backgroundColor: '#334155',
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   detailBtnText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.bold,
     fontStyle: 'italic',
   },
-  playerRow: {
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
+  playerCard: {
+    marginBottom: theme.spacing.sm,
+  },
+  tecnicoCard: {
+    marginBottom: theme.spacing.sm,
   },
   tecnicoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: '#f59e0b',
   },
   tecnicoName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
   },
   tecnicoClub: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 2,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   playerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: theme.spacing.md,
   },
   playerPos: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
   },
   playerName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
-    marginTop: 1,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+    marginTop: theme.spacing.xs,
   },
   playerStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingTop: 10,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.md,
   },
   playerStat: {
     alignItems: 'center',
   },
   playerStatValue: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '700',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.bold,
   },
   playerStatLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    marginTop: 2,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.xs,
     textTransform: 'uppercase',
   },
   playerRight: {
     alignItems: 'flex-end',
   },
   playerClub: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   tecnicoPts: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 2,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#22c55e',
+    marginTop: theme.spacing.md,
   },
   totalLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   totalValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#22c55e',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.primary,
   },
   dueloText: {
-    fontSize: 11,
-    color: '#f97316',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  reservaCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.warning,
+    marginTop: theme.spacing.xs,
+    fontWeight: theme.fontWeight.medium,
   },
   reservaTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: theme.spacing.md,
   },
   reservaPos: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
     textTransform: 'uppercase',
   },
   reservaName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
-    marginTop: 1,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+    marginTop: theme.spacing.xs,
   },
   reservaStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingTop: 10,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.md,
   },
   compRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
   },
   compFormacao: {
-    fontSize: 14,
-    color: '#cbd5e1',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.text,
   },
   compPts: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
-  },
-  newBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  newBtnText: {
-    color: '#0f172a',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  backBtn: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  backBtnText: {
-    color: '#94a3b8',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  exportBtn: {
-    borderWidth: 1,
-    borderColor: '#3b82f6',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  exportBtnText: {
-    color: '#3b82f6',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  deleteBtn: {
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  deleteBtnText: {
-    color: '#ef4444',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: theme.spacing['3xl'],
   },
   modalContent: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing['2xl'],
     width: '100%',
     maxWidth: 340,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 8,
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
   },
   modalMsg: {
-    fontSize: 14,
-    color: '#94a3b8',
-    lineHeight: 20,
-    marginBottom: 24,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.spacing.xl,
+    marginBottom: theme.spacing['2xl'],
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.md,
   },
   modalCancel: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
   },
   modalConfirm: {
     flex: 1,
-    backgroundColor: '#ef4444',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: theme.colors.danger,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   modalConfirmText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
   },
 });

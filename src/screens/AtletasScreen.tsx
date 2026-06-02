@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import { Atleta } from '../types';
 import { fetchAtletas } from '../services/api';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import Badge from '../components/Badge';
 
 type SortKey = 'preco_desc' | 'preco_asc' | 'media_desc' | 'media_asc';
 
@@ -31,6 +35,17 @@ const STATUS_LIST = [
   { key: 'Lesionado', label: 'Lesionado' },
   { key: 'Nulo', label: 'Nulo' },
 ];
+
+function statusBadgeVariant(status: string): 'primary' | 'warning' | 'danger' | 'neutral' {
+  switch (status) {
+    case 'Provável': return 'primary';
+    case 'Duvidoso': return 'warning';
+    case 'Suspenso':
+    case 'Lesionado':
+    case 'Nulo': return 'danger';
+    default: return 'neutral';
+  }
+}
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'preco_desc', label: 'Preço ↓' },
@@ -94,12 +109,12 @@ export default function AtletasScreen() {
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar por nome..."
-        placeholderTextColor="#64748b"
+        placeholderTextColor={theme.colors.textMuted}
         value={query}
         onChangeText={handleQueryChange}
       />
 
-      <Text style={styles.filterLabel}>Posição</Text>
+      <SectionHeader label="Posição" />
       <FlatList
         horizontal
         data={POSICOES}
@@ -118,7 +133,7 @@ export default function AtletasScreen() {
         )}
       />
 
-      <Text style={styles.filterLabel}>Status</Text>
+      <SectionHeader label="Status" />
       <FlatList
         horizontal
         data={STATUS_LIST}
@@ -137,7 +152,7 @@ export default function AtletasScreen() {
         )}
       />
 
-      <Text style={styles.filterLabel}>Ordenar</Text>
+      <SectionHeader label="Ordenar" />
       <FlatList
         horizontal
         data={SORT_OPTIONS}
@@ -162,7 +177,7 @@ export default function AtletasScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -170,7 +185,7 @@ export default function AtletasScreen() {
           keyExtractor={(item) => String(item.atleta_id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <Card>
               <View style={styles.cardTop}>
                 <View>
                   <Text style={styles.cardNome}>{item.apelido}</Text>
@@ -178,9 +193,7 @@ export default function AtletasScreen() {
                     {item.posicao_nome} · {item.clube}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor(item.status) }]}>
-                  <Text style={styles.statusText}>{item.status}</Text>
-                </View>
+                <Badge label={item.status} variant={statusBadgeVariant(item.status)} />
               </View>
               <View style={styles.cardStats}>
                 <View style={styles.stat}>
@@ -208,7 +221,7 @@ export default function AtletasScreen() {
                   Val.: {(item.potential_valorizacao * 100).toFixed(1)}%
                 </Text>
               </View>
-            </View>
+            </Card>
           )}
         />
       )}
@@ -216,81 +229,61 @@ export default function AtletasScreen() {
   );
 }
 
-function statusColor(status: string): string {
-  switch (status) {
-    case 'Provável': return '#22c55e';
-    case 'Duvidoso': return '#f97316';
-    case 'Suspenso':
-    case 'Lesionado':
-    case 'Nulo': return '#ef4444';
-    default: return '#64748b';
-  }
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
-    paddingTop: 8,
+    backgroundColor: theme.colors.bg,
+    paddingTop: theme.spacing.sm,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    fontSize: theme.fontSize['3xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   searchInput: {
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
-    color: '#f8fafc',
-    marginHorizontal: 16,
-    marginBottom: 12,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#334155',
-  },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    paddingHorizontal: 16,
-    marginBottom: 6,
+    borderColor: theme.colors.borderLight,
   },
   filterList: {
     maxHeight: 38,
-    marginBottom: 8,
-    paddingHorizontal: 16,
+    marginBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#1e293b',
-    marginRight: 6,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceElevated,
+    marginRight: theme.spacing.xs,
   },
   filterChipActive: {
-    borderColor: '#22c55e',
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryGlow,
   },
   filterChipText: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   filterChipTextActive: {
-    color: '#22c55e',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   resultCount: {
-    fontSize: 12,
-    color: '#64748b',
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   center: {
     flex: 1,
@@ -298,73 +291,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   list: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing['3xl'],
   },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: theme.spacing.sm,
   },
   cardNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.text,
   },
   cardSub: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
     marginTop: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
   },
   cardStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   stat: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '700',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.bold,
   },
   statLabel: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
     marginTop: 1,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingTop: 8,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.sm,
   },
   footerVariacao: {
-    fontSize: 12,
-    color: '#f97316',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.warning,
   },
   footerValorizacao: {
-    fontSize: 12,
-    color: '#3b82f6',
-    fontWeight: '600',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.info,
+    fontWeight: theme.fontWeight.semibold,
   },
 });

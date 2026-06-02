@@ -14,6 +14,11 @@ import {
 import { CartolaAthlete, FORMACOES, Lineup, OtimizarParams } from '../types';
 import { fetchMercado, fetchClubes, postOtimizar } from '../services/api';
 import { saveLineup } from '../services/storage';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import Button from '../components/Button';
+import Badge from '../components/Badge';
 
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
@@ -167,155 +172,166 @@ export default function NewLineupScreen({ route, navigation }: any) {
         <Text style={styles.title}>Nova Escalação</Text>
         <Text style={styles.subtitle}>Rodada {rodada}</Text>
 
-        <Text style={styles.label}>Nome</Text>
-        <TextInput
-          style={styles.input}
-          value={nome}
-          onChangeText={setNome}
-          placeholderTextColor="#64748b"
-        />
-
-        <Text style={styles.label}>Orçamento (C$)</Text>
-        <TextInput
-          style={styles.input}
-          value={orcamento}
-          onChangeText={setOrcamento}
-          keyboardType="decimal-pad"
-          placeholderTextColor="#64748b"
-        />
-
-        <Text style={styles.label}>Formação</Text>
-        <View style={styles.pickerRow}>
-          {FORMACOES.map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.pickerItem, formacao === f && styles.pickerActive]}
-              onPress={() => setFormacao(f)}
-            >
-              <Text
-                style={[
-                  styles.pickerText,
-                  formacao === f && styles.pickerTextActive,
-                ]}
-              >
-                {f}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.labelRow}>
-          <Text style={styles.labelInline}>Perfil de Risco</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Help')}>
-            <Text style={styles.helpBtn}>?</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.pickerRow}>
-          {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
-            <TouchableOpacity
-              key={p}
-              style={[styles.pickerItem, perfil === p && styles.pickerActive]}
-              onPress={() => setPerfil(p)}
-            >
-              <Text
-                style={[
-                  styles.pickerText,
-                  perfil === p && styles.pickerTextActive,
-                ]}
-              >
-                {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : 'Conservador'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.labelRow}>
-          <Text style={styles.labelInline}>Foco</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Help')}>
-            <Text style={styles.helpBtn}>?</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
-        <View style={styles.pickerRow}>
-          {FOCOS.map((v) => (
-            <TouchableOpacity
-              key={v}
-              style={[styles.pesoItem, foco === v && styles.pesoActive]}
-              onPress={() => setFoco(v)}
-            >
-              <Text
-                style={[
-                  styles.pickerText,
-                  foco === v && styles.pickerTextActive,
-                ]}
-              >
-                {v.toFixed(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Incluir duvidosos</Text>
-          <Switch
-            value={incluirDuvidosos}
-            onValueChange={setIncluirDuvidosos}
-            trackColor={{ false: '#334155', true: '#22c55e' }}
-            thumbColor="#f8fafc"
-          />
-        </View>
-
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Reserva de luxo</Text>
-          <Switch
-            value={reservaLuxo}
-            onValueChange={setReservaLuxo}
-            trackColor={{ false: '#334155', true: '#22c55e' }}
-            thumbColor="#f8fafc"
-          />
-        </View>
-
-        <Text style={styles.label}>Obrigar atletas</Text>
-        <View style={styles.inputRow}>
+        <Card>
+          <SectionHeader label="Nome" />
           <TextInput
-            style={[styles.input, styles.inputFlex]}
-            value={obrigarText}
-            onChangeText={setObrigarText}
-            placeholder="IDs separados por vírgula"
-            placeholderTextColor="#64748b"
-            keyboardType="number-pad"
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+            placeholderTextColor={theme.colors.textMuted}
           />
-          <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
-            <Text style={styles.searchBtnText}>🔍</Text>
-          </TouchableOpacity>
-        </View>
 
-        <Text style={styles.label}>Excluir atletas</Text>
-        <View style={styles.inputRow}>
+          <SectionHeader label="Orçamento (C$)" />
           <TextInput
-            style={[styles.input, styles.inputFlex]}
-            value={excluirText}
-            onChangeText={setExcluirText}
-            placeholder="IDs separados por vírgula"
-            placeholderTextColor="#64748b"
-            keyboardType="number-pad"
+            style={styles.input}
+            value={orcamento}
+            onChangeText={setOrcamento}
+            keyboardType="decimal-pad"
+            placeholderTextColor={theme.colors.textMuted}
           />
-          <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
-            <Text style={styles.searchBtnText}>🔍</Text>
-          </TouchableOpacity>
-        </View>
+        </Card>
 
-        <TouchableOpacity
-          style={[styles.generateBtn, loading && styles.generateBtnDisabled]}
-          onPress={handleGenerate}
-          disabled={loading}
-        >
-          {loading ? (
+        <Card>
+          <SectionHeader label="Formação" />
+          <View style={styles.pickerRow}>
+            {FORMACOES.map((f) => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.pickerItem, formacao === f && styles.pickerActive]}
+                onPress={() => setFormacao(f)}
+              >
+                <Text
+                  style={[
+                    styles.pickerText,
+                    formacao === f && styles.pickerTextActive,
+                  ]}
+                >
+                  {f}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <SectionHeader
+            label="Perfil de Risco"
+            action={
+              <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+                <Text style={styles.helpBtn}>?</Text>
+              </TouchableOpacity>
+            }
+          />
+          <View style={styles.pickerRow}>
+            {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[styles.pickerItem, perfil === p && styles.pickerActive]}
+                onPress={() => setPerfil(p)}
+              >
+                <Text
+                  style={[
+                    styles.pickerText,
+                    perfil === p && styles.pickerTextActive,
+                  ]}
+                >
+                  {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : 'Conservador'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <SectionHeader
+            label="Foco"
+            action={
+              <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+                <Text style={styles.helpBtn}>?</Text>
+              </TouchableOpacity>
+            }
+          />
+          <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
+          <View style={styles.pickerRow}>
+            {FOCOS.map((v) => (
+              <TouchableOpacity
+                key={v}
+                style={[styles.pesoItem, foco === v && styles.pesoActive]}
+                onPress={() => setFoco(v)}
+              >
+                <Text
+                  style={[
+                    styles.pickerText,
+                    foco === v && styles.pickerTextActive,
+                  ]}
+                >
+                  {v.toFixed(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Card>
+
+        <Card>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Incluir duvidosos</Text>
+            <Switch
+              value={incluirDuvidosos}
+              onValueChange={setIncluirDuvidosos}
+              trackColor={{ false: theme.colors.borderLight, true: theme.colors.primary }}
+              thumbColor={theme.colors.text}
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Reserva de luxo</Text>
+            <Switch
+              value={reservaLuxo}
+              onValueChange={setReservaLuxo}
+              trackColor={{ false: theme.colors.borderLight, true: theme.colors.primary }}
+              thumbColor={theme.colors.text}
+            />
+          </View>
+        </Card>
+
+        <Card>
+          <SectionHeader label="Obrigar atletas" />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.inputFlex]}
+              value={obrigarText}
+              onChangeText={setObrigarText}
+              placeholder="IDs separados por vírgula"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
+              <Text style={styles.searchBtnText}>🔍</Text>
+            </TouchableOpacity>
+          </View>
+
+          <SectionHeader label="Excluir atletas" />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.inputFlex]}
+              value={excluirText}
+              onChangeText={setExcluirText}
+              placeholder="IDs separados por vírgula"
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
+              <Text style={styles.searchBtnText}>🔍</Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+
+        {loading ? (
+          <TouchableOpacity
+            style={styles.generateBtn}
+            disabled
+          >
             <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.generateBtnText}>Gerar Escalação</Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          <Button variant="primary" label="Gerar escalação" onPress={handleGenerate} />
+        )}
         {feedback !== '' && (
           <Text style={styles.feedback}>{feedback}</Text>
         )}
@@ -323,9 +339,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           <Text style={styles.errorMsg}>{error}</Text>
         )}
 
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Voltar</Text>
-        </TouchableOpacity>
+        <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
       </ScrollView>
 
       <Modal visible={showSearch} transparent animationType="slide">
@@ -344,7 +358,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Buscar por apelido..."
-              placeholderTextColor="#64748b"
+              placeholderTextColor={theme.colors.textMuted}
               autoFocus
             />
             <ScrollView style={styles.modalList}>
@@ -378,72 +392,49 @@ export default function NewLineupScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.bg,
   },
   inner: {
-    padding: 20,
+    padding: theme.spacing.xl,
     paddingBottom: 40,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize['3xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginBottom: 24,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing['2xl'],
     marginTop: 2,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  labelInline: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   helpBtn: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#22c55e',
-    width: 20,
-    height: 20,
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.primary,
+    width: theme.spacing.xl,
+    height: theme.spacing.xl,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#22c55e',
+    borderColor: theme.colors.primary,
     textAlign: 'center',
     lineHeight: 17,
     overflow: 'hidden',
   },
   input: {
-    backgroundColor: '#1e293b',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.md,
     padding: 14,
-    fontSize: 15,
-    color: '#f8fafc',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.borderLight,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   inputFlex: {
     flex: 1,
@@ -451,15 +442,15 @@ const styles = StyleSheet.create({
   searchBtn: {
     width: 46,
     height: 46,
-    borderRadius: 10,
-    backgroundColor: '#1e293b',
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchBtnText: {
-    fontSize: 18,
+    fontSize: theme.fontSize.xl,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -468,166 +459,145 @@ const styles = StyleSheet.create({
   },
   pickerItem: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#1e293b',
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceElevated,
   },
   pickerActive: {
-    borderColor: '#22c55e',
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryGlow,
   },
   pesoItem: {
     width: 52,
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#1e293b',
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceElevated,
   },
   pesoActive: {
-    borderColor: '#3b82f6',
-    backgroundColor: 'rgba(59,130,246,0.15)',
+    borderColor: theme.colors.info,
+    backgroundColor: theme.colors.infoGlow,
   },
   pickerText: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   pickerTextActive: {
-    color: '#22c55e',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
-    paddingVertical: 4,
+    marginTop: theme.spacing.xl,
+    paddingVertical: theme.spacing.xs,
   },
   switchLabel: {
-    fontSize: 15,
-    color: '#cbd5e1',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textSecondary,
   },
   generateBtn: {
-    backgroundColor: '#22c55e',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
     marginTop: 28,
   },
-  generateBtnDisabled: {
-    opacity: 0.6,
-  },
-  generateBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   feedback: {
-    color: '#94a3b8',
-    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.base,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: theme.spacing.md,
   },
   errorMsg: {
-    color: '#ef4444',
-    fontSize: 13,
+    color: theme.colors.danger,
+    fontSize: theme.fontSize.base,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: theme.spacing.md,
   },
   focoHint: {
-    fontSize: 12,
-    color: '#3b82f6',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.info,
     marginBottom: 6,
     fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
     maxHeight: '80%',
-    padding: 20,
+    padding: theme.spacing.xl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.text,
   },
   modalClose: {
-    fontSize: 18,
-    color: '#94a3b8',
-    padding: 4,
+    fontSize: theme.fontSize.xl,
+    color: theme.colors.textSecondary,
+    padding: theme.spacing.xs,
   },
   modalSearch: {
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
     padding: 14,
-    fontSize: 15,
-    color: '#f8fafc',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
+    borderColor: theme.colors.borderLight,
+    marginBottom: theme.spacing.md,
   },
   modalList: {
     maxHeight: 400,
   },
   modalEmpty: {
-    color: '#64748b',
+    color: theme.colors.textMuted,
     textAlign: 'center',
-    marginTop: 24,
-    fontSize: 14,
+    marginTop: theme.spacing['2xl'],
+    fontSize: theme.fontSize.base,
   },
   modalItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderBottomColor: theme.colors.borderLight,
   },
   modalItemLeft: {
     flex: 1,
   },
   modalItemName: {
-    fontSize: 15,
-    color: '#f8fafc',
-    fontWeight: '600',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
   },
   modalItemDetail: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   modalItemId: {
     fontSize: 11,
-    color: '#64748b',
-    marginLeft: 8,
-  },
-  backBtn: {
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  backBtnText: {
-    color: '#94a3b8',
-    fontSize: 15,
-    fontWeight: '600',
+    color: theme.colors.textMuted,
+    marginLeft: theme.spacing.sm,
   },
 });

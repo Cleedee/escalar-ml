@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import Button from '../components/Button';
 import { League } from '../types';
 import { deleteLeague, getLeagues, saveLeague } from '../services/storage';
 import { fetchStatus } from '../services/api';
@@ -112,29 +115,31 @@ export default function LeaguesScreen({ navigation }: any) {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.card}
             onPress={() => navigation.navigate('LeagueDetail', { league: item })}
+            activeOpacity={0.7}
           >
-            <View style={styles.cardTop}>
-              <Text style={styles.cardNome}>{item.nome}</Text>
-              <Text style={styles.cardModalidade}>
-                {item.modalidade === 'pontuacao' ? 'Pontuação' : 'Patrimônio'}
+            <Card>
+              <View style={styles.cardTop}>
+                <Text style={styles.cardNome}>{item.nome}</Text>
+                <Text style={styles.cardModalidade}>
+                  {item.modalidade === 'pontuacao' ? 'Pontuação' : 'Patrimônio'}
+                </Text>
+              </View>
+              <Text style={styles.cardRodadas}>
+                R{item.rodada_inicial}{item.rodada_final !== item.rodada_inicial ? ` a R${item.rodada_final}` : ''} · {item.rodada_final - item.rodada_inicial + 1} rodada{item.rodada_final !== item.rodada_inicial ? 's' : ''}
               </Text>
-            </View>
-            <Text style={styles.cardRodadas}>
-              R{item.rodada_inicial}{item.rodada_final !== item.rodada_inicial ? ` a R${item.rodada_final}` : ''} · {item.rodada_final - item.rodada_inicial + 1} rodada{item.rodada_final !== item.rodada_inicial ? 's' : ''}
-            </Text>
-            <Text style={styles.cardTimes}>
-              {item.times.length} time{item.times.length !== 1 ? 's' : ''}
-            </Text>
-            <View style={styles.cardActions}>
-              <TouchableOpacity onPress={() => openCopy(item)}>
-                <Text style={styles.copyBtnText}>Copiar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteBtnText}>Excluir</Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.cardTimes}>
+                {item.times.length} time{item.times.length !== 1 ? 's' : ''}
+              </Text>
+              <View style={styles.cardActions}>
+                <TouchableOpacity onPress={() => openCopy(item)}>
+                  <Text style={styles.copyBtnText}>Copiar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                  <Text style={styles.deleteBtnText}>Excluir</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
           </TouchableOpacity>
         )}
       />
@@ -155,7 +160,7 @@ export default function LeaguesScreen({ navigation }: any) {
               value={nome}
               onChangeText={setNome}
               placeholder="Ex: Liga dos Amigos"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={theme.colors.textMuted}
             />
 
             <Text style={styles.label}>Rodada Inicial</Text>
@@ -238,7 +243,7 @@ export default function LeaguesScreen({ navigation }: any) {
               style={styles.input}
               value={copiaNome}
               onChangeText={setCopiaNome}
-              placeholderTextColor="#64748b"
+              placeholderTextColor={theme.colors.textMuted}
             />
 
             {copiarOrigem && (
@@ -265,18 +270,18 @@ export default function LeaguesScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
-    paddingTop: 8,
+    backgroundColor: theme.colors.bg,
+    paddingTop: theme.spacing.sm,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f8fafc',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    fontSize: theme.fontSize['3xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   list: {
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.lg,
     paddingBottom: 100,
   },
   empty: {
@@ -284,188 +289,182 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyText: {
-    color: '#64748b',
-    fontSize: 15,
-  },
-  card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSize.md,
   },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   cardNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#f8fafc',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.text,
   },
   cardModalidade: {
-    fontSize: 12,
-    color: '#22c55e',
-    fontWeight: '600',
-    paddingHorizontal: 8,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+    paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.primaryGlow,
   },
   cardTimes: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   cardRodadas: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   cardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 16,
-    marginTop: 8,
+    gap: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
   },
   copyBtnText: {
-    color: '#3b82f6',
-    fontSize: 13,
-    fontWeight: '600',
+    color: theme.colors.info,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
   },
   deleteBtnText: {
-    color: '#ef4444',
-    fontSize: 13,
-    fontWeight: '600',
+    color: theme.colors.danger,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
   },
   addBtn: {
     position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
-    backgroundColor: '#22c55e',
-    borderRadius: 12,
-    paddingVertical: 16,
+    bottom: theme.spacing.xl,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
   addBtnText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.semibold,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: theme.colors.overlay,
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing['2xl'],
   },
   modalScroll: {
     maxHeight: '90%',
   },
   modalContent: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing['2xl'],
     width: '100%',
     maxWidth: 380,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f8fafc',
-    marginBottom: 16,
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 6,
-    marginTop: 12,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   input: {
-    backgroundColor: '#0f172a',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
-    color: '#f8fafc',
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: theme.colors.borderLight,
   },
   pickerRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: theme.spacing.sm,
   },
   pickerItem: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#0f172a',
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.bg,
     alignItems: 'center',
   },
   pickerItemSm: {
     width: 38,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.sm,
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: '#0f172a',
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.bg,
     alignItems: 'center',
   },
   pickerActive: {
-    borderColor: '#22c55e',
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryGlow,
   },
   pickerText: {
-    fontSize: 14,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
   pickerTextSm: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   pickerTextActive: {
-    color: '#22c55e',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   hint: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 8,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm,
     fontStyle: 'italic',
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing['2xl'],
   },
   cancelBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   cancelBtnText: {
-    color: '#94a3b8',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
   },
   confirmBtn: {
     flex: 1,
-    backgroundColor: '#22c55e',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   confirmBtnText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
   },
 });

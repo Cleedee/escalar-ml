@@ -9,6 +9,10 @@ import {
 } from 'react-native';
 import { JustificarResponse } from '../types';
 import { fetchJustificar } from '../services/api';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import Badge from '../components/Badge';
 
 const SCOUT_LABELS: Record<string, string> = {
   A: 'Assistência',
@@ -55,7 +59,7 @@ export default function JustificarScreen({ route, navigation }: any) {
   if (loading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#22c55e" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -72,14 +76,11 @@ export default function JustificarScreen({ route, navigation }: any) {
   }
 
   const { atleta, scout, desempenho_recente, partida, metodologia, analise_perfis } = data;
-  const statusColor =
-    atleta.status === 'Provável' ? '#22c55e' :
-    atleta.status === 'Duvidoso' ? '#f97316' : '#ef4444';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       {/* Player header */}
-      <View style={styles.playerCard}>
+      <Card>
         <View style={styles.playerMain}>
           <View>
             <Text style={styles.playerName}>{atleta.apelido}</Text>
@@ -87,9 +88,10 @@ export default function JustificarScreen({ route, navigation }: any) {
               {atleta.posicao} · {atleta.clube}
             </Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusText}>{atleta.status}</Text>
-          </View>
+          <Badge
+            label={atleta.status}
+            variant={atleta.status === 'Provável' ? 'primary' : atleta.status === 'Duvidoso' ? 'warning' : 'danger'}
+          />
         </View>
         <View style={styles.playerStats}>
           <View style={styles.statItem}>
@@ -109,10 +111,10 @@ export default function JustificarScreen({ route, navigation }: any) {
             <Text style={styles.statLabel}>Jogos</Text>
           </View>
         </View>
-      </View>
+      </Card>
 
       {/* Scout */}
-      <Text style={styles.sectionTitle}>Scout (média por jogo)</Text>
+      <SectionHeader label="Scout (média por jogo)" />
       <View style={styles.scoutGrid}>
         {Object.entries(scout).map(([key, item]) => (
           <View key={key} style={styles.scoutItem}>
@@ -127,8 +129,8 @@ export default function JustificarScreen({ route, navigation }: any) {
       </View>
 
       {/* Recent performance */}
-      <Text style={styles.sectionTitle}>Desempenho Recente</Text>
-      <View style={styles.recenteCard}>
+      <SectionHeader label="Desempenho Recente" />
+      <Card>
         <View style={styles.recenteBars}>
           {desempenho_recente.rodadas.map((r) => {
             const maxPts = Math.max(...desempenho_recente.rodadas.map((x) => x.pontos), 1);
@@ -150,41 +152,40 @@ export default function JustificarScreen({ route, navigation }: any) {
         <Text style={styles.recenteMedia}>
           Média últimos 5: {desempenho_recente.media_ult5.toFixed(1)} pts
         </Text>
-      </View>
+      </Card>
 
       {/* Next match */}
-      <Text style={styles.sectionTitle}>Próxima Partida</Text>
-      <View style={styles.partidaCard}>
+      <SectionHeader label="Próxima Partida" />
+      <Card>
         <Text style={styles.partidaText}>
           {partida.casa ? '🏠 Casa' : '✈️ Fora'} vs{' '}
           <Text style={styles.partidaAdv}>{partida.adversario}</Text>
         </Text>
-      </View>
+      </Card>
 
       {/* Methodology */}
-      <Text style={styles.sectionTitle}>Metodologia</Text>
-      <View style={styles.metodologiaCard}>
-        <View style={styles.metBadge}>
-          <Text style={styles.metBadgeText}>
-            {metodologia.tipo === 'ml' ? 'ML' : metodologia.tipo}
-          </Text>
-        </View>
+      <SectionHeader label="Metodologia" />
+      <Card>
+        <Badge label={metodologia.tipo === 'ml' ? 'ML' : metodologia.tipo} variant="info" />
         <Text style={styles.metDesc}>{metodologia.descricao}</Text>
         <Text style={styles.metFormula}>{metodologia.formula}</Text>
-      </View>
+      </Card>
 
       {/* Risk profiles */}
-      <Text style={styles.sectionTitle}>Análise por Perfil</Text>
+      <SectionHeader label="Análise por Perfil" />
       {analise_perfis.map((p) => (
-        <View key={p.perfil} style={styles.perfilRow}>
-          <Text style={styles.perfilName}>
-            {p.perfil === 'neutro' ? 'Neutro' :
-             p.perfil === 'agressivo' ? 'Agressivo' : 'Conservador'}
-          </Text>
-          <Text style={p.selecionado ? styles.perfilSim : styles.perfilNao}>
-            {p.selecionado ? 'Selecionado' : 'Descartado'}
-          </Text>
-        </View>
+        <Card key={p.perfil}>
+          <View style={styles.perfilRowInner}>
+            <Text style={styles.perfilName}>
+              {p.perfil === 'neutro' ? 'Neutro' :
+               p.perfil === 'agressivo' ? 'Agressivo' : 'Conservador'}
+            </Text>
+            <Badge
+              label={p.selecionado ? 'Selecionado' : 'Descartado'}
+              variant={p.selecionado ? 'primary' : 'neutral'}
+            />
+          </View>
+        </Card>
       ))}
 
       <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -197,66 +198,50 @@ export default function JustificarScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.bg,
   },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: theme.spacing['2xl'],
   },
   inner: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing['3xl'] + theme.spacing.sm,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 15,
+    color: theme.colors.danger,
+    fontSize: theme.fontSize.md,
     textAlign: 'center',
   },
   backBtn: {
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.borderRadius.lg,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 28,
   },
   backBtnText: {
-    color: '#94a3b8',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  playerCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.semibold,
   },
   playerMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   playerName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize['2xl'],
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   playerSub: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
   playerStats: {
     flexDirection: 'row',
@@ -266,152 +251,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#22c55e',
+    fontSize: theme.fontSize.lg,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.primary,
   },
   statLabel: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.colors.textMuted,
     marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 20,
   },
   scoutGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   scoutItem: {
     width: '48%',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
   },
   scoutKey: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f8fafc',
+    fontSize: theme.fontSize.xl,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   scoutLabel: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.colors.textMuted,
     marginBottom: 6,
   },
   scoutValue: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   scoutMedia: {
     fontSize: 11,
-    color: '#64748b',
+    color: theme.colors.textMuted,
     marginTop: 1,
-  },
-  recenteCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
   },
   recenteBars: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'flex-end',
     height: 120,
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   barCol: {
     alignItems: 'center',
     flex: 1,
   },
   barValue: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginBottom: 4,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
   },
   bar: {
     width: 24,
-    backgroundColor: '#22c55e',
+    backgroundColor: theme.colors.primary,
     borderRadius: 4,
     minHeight: 4,
   },
   barLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    marginTop: 4,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.xs,
   },
   recenteMedia: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
-  partidaCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-  },
   partidaText: {
-    fontSize: 15,
-    color: '#cbd5e1',
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textSecondary,
   },
   partidaAdv: {
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  metodologiaCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 16,
-  },
-  metBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  metBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.text,
   },
   metDesc: {
-    fontSize: 14,
-    color: '#cbd5e1',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
     marginBottom: 6,
   },
   metFormula: {
     fontSize: 13,
-    color: '#64748b',
+    color: theme.colors.textMuted,
     fontFamily: 'monospace',
   },
-  perfilRow: {
+  perfilName: {
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
+  },
+  perfilRowInner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 6,
-  },
-  perfilName: {
-    fontSize: 14,
-    color: '#cbd5e1',
-  },
-  perfilSim: {
-    fontSize: 14,
-    color: '#22c55e',
-    fontWeight: '600',
-  },
-  perfilNao: {
-    fontSize: 14,
-    color: '#64748b',
+    alignItems: 'center',
   },
 });

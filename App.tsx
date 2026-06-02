@@ -1,7 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, Text } from 'react-native';
+import { Platform, Text, StatusBar } from 'react-native';
+import { theme } from './src/theme';
 import StatusScreen from './src/screens/StatusScreen';
 import LineupsScreen from './src/screens/LineupsScreen';
 import NewLineupScreen from './src/screens/NewLineupScreen';
@@ -46,16 +47,25 @@ if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker'
 export default function App() {
   return (
     <NavigationContainer>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.bg} />
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: '#0f172a',
-            borderTopColor: '#1e293b',
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.border,
             borderTopWidth: 1,
+            paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+            paddingTop: 8,
+            height: Platform.OS === 'ios' ? 85 : 65,
           },
-          tabBarActiveTintColor: '#22c55e',
-          tabBarInactiveTintColor: '#64748b',
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.textMuted,
+          tabBarLabelStyle: {
+            fontSize: theme.fontSize.xs,
+            fontWeight: theme.fontWeight.semibold,
+            marginTop: 2,
+          },
         }}
       >
         <Tab.Screen

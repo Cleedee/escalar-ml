@@ -12,6 +12,18 @@ import { MarketStatus, STATUS_MAP } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
 import { version as APP_VERSION } from '../../package.json';
+import { theme } from '../theme';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import Badge from '../components/Badge';
+
+const BADGE_VARIANT: Record<number, 'primary' | 'warning' | 'info' | 'danger' | 'neutral'> = {
+  1: 'primary',
+  2: 'warning',
+  3: 'info',
+  4: 'info',
+  5: 'danger',
+};
 
 export default function StatusScreen() {
   const [status, setStatus] = useState<MarketStatus | null>(null);
@@ -38,6 +50,7 @@ export default function StatusScreen() {
   const statusCode = status?.status_mercado ?? null;
   const statusInfo = statusCode != null ? STATUS_MAP[statusCode] : null;
   const rodada = status?.rodada_atual ?? null;
+  const badgeVariant = statusCode != null ? BADGE_VARIANT[statusCode] ?? 'neutral' : 'neutral';
 
   return (
     <View style={styles.container}>
@@ -55,7 +68,7 @@ export default function StatusScreen() {
 
       {loading && (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#22c55e" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Consultando status...</Text>
         </View>
       )}
@@ -75,36 +88,37 @@ export default function StatusScreen() {
           style={styles.content}
           contentContainerStyle={styles.contentInner}
         >
-          <View
-            style={[
-              styles.statusCard,
-              { borderColor: statusInfo?.color ?? '#333' },
-            ]}
+          <Card
+            style={{
+              borderColor: statusInfo?.color ?? '#333',
+              borderWidth: 1.5,
+              marginBottom: theme.spacing['2xl'],
+            }}
           >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: statusInfo?.color ?? '#666' },
-              ]}
-            />
-            <View style={styles.statusText}>
-              <Text style={styles.statusLabel}>
-                {statusInfo?.label ?? 'Desconhecido'}
-              </Text>
-              {rodada != null && (
-                <Text style={styles.statusRound}>Rodada {rodada}</Text>
-              )}
+            <View style={styles.statusCardRow}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: statusInfo?.color ?? '#666' },
+                ]}
+              />
+              <View style={styles.statusText}>
+                <Badge label={statusInfo?.label ?? 'Desconhecido'} variant={badgeVariant} size="md" />
+                {rodada != null && (
+                  <Text style={styles.statusRound}>Rodada {rodada}</Text>
+                )}
+              </View>
             </View>
-          </View>
+          </Card>
 
-          <Text style={styles.sectionTitle}>Resposta da API</Text>
+          <SectionHeader label="Resposta da API" />
           <View style={styles.jsonCard}>
             <Text style={styles.jsonText}>
               {JSON.stringify(status, null, 2)}
             </Text>
           </View>
 
-          <Text style={styles.legendTitle}>Legenda</Text>
+          <SectionHeader label="Legenda" />
           {Object.entries(STATUS_MAP).map(([code, info]) => (
             <View key={code} style={styles.legendRow}>
               <View
@@ -128,11 +142,11 @@ export default function StatusScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: theme.colors.bg,
   },
   header: {
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     alignItems: 'center',
   },
   logoImage: {
@@ -140,8 +154,8 @@ const styles = StyleSheet.create({
     height: 80,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   versionText: {
@@ -153,139 +167,113 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing['2xl'],
   },
   loadingText: {
-    color: '#94a3b8',
-    marginTop: 12,
-    fontSize: 15,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+    fontSize: theme.fontSize.md,
   },
   errorIcon: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#ef4444',
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.danger,
     width: 64,
     height: 64,
     lineHeight: 64,
     textAlign: 'center',
     borderRadius: 32,
     borderWidth: 3,
-    borderColor: '#ef4444',
-    marginBottom: 16,
+    borderColor: theme.colors.danger,
+    marginBottom: theme.spacing.lg,
     overflow: 'hidden',
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 16,
+    color: theme.colors.danger,
+    fontSize: theme.fontSize.lg,
     textAlign: 'center',
   },
   retry: {
-    color: '#22c55e',
-    fontSize: 15,
-    fontWeight: '600',
-    marginTop: 20,
-    paddingHorizontal: 24,
+    color: theme.colors.primary,
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.semibold,
+    marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing['2xl'],
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#22c55e',
-    borderRadius: 8,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
     overflow: 'hidden',
   },
   content: {
     flex: 1,
   },
   contentInner: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl,
   },
-  statusCard: {
+  statusCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    padding: 20,
-    marginBottom: 24,
   },
   statusDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: theme.spacing.lg,
+    height: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
     marginRight: 14,
   },
   statusText: {
     flex: 1,
   },
-  statusLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#f8fafc',
-  },
   statusRound: {
-    fontSize: 14,
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
   jsonCard: {
-    backgroundColor: '#0d1117',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 24,
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing['2xl'],
   },
   jsonText: {
     fontFamily: 'monospace',
-    fontSize: 12,
+    fontSize: theme.fontSize.sm,
     color: '#e2e8f0',
     lineHeight: 18,
-  },
-  legendTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
   },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   legendDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: theme.borderRadius.sm,
     marginRight: 10,
   },
   legendCode: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
+    color: theme.colors.textSecondary,
     width: 20,
   },
   legendLabel: {
-    fontSize: 13,
+    fontSize: theme.fontSize.base,
     color: '#cbd5e1',
   },
   footer: {
-    padding: 16,
+    padding: theme.spacing.lg,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
-    color: '#22c55e',
-    fontWeight: '600',
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   footerSub: {
-    fontSize: 10,
+    fontSize: theme.fontSize.xs,
     color: '#475569',
     marginTop: 2,
   },
