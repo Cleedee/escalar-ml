@@ -135,6 +135,13 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           previsto: substituto.previsto,
           clube: substituto.clube,
           role: substituido.role === 'capitao' ? 'capitao' : undefined,
+          media_num: substituto.media_num,
+          jogos_num: substituto.jogos_num,
+          variacao_num: substituto.variacao_num,
+          potential_valorizacao: substituto.potential_valorizacao,
+          preco_projetado: substituto.preco_projetado,
+          tendencia: substituto.tendencia,
+          eficiencia: substituto.eficiencia,
         };
 
         novasReservas[sub.posicao] = {
