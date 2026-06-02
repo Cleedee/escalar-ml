@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { Player, Reserva, PartidasResponse } from '../types';
-import { deleteLineup } from '../services/storage';
+import { Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
+import { deleteLineup, saveLineup } from '../services/storage';
 import { fetchPontuados, fetchPartidas } from '../services/api';
+import { calcularSubstituicoes } from '../services/substituicaoEngine';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -22,9 +23,11 @@ const posicoes: Record<string, string> = {
 export default function LineupDetailScreen({ route, navigation }: any) {
   const { lineup } = route.params;
   const { response } = lineup;
-  const [actualScores, setActualScores] = useState<Record<string, number> | null>(null);
+  const [pontuadosAtletas, setPontuadosAtletas] = useState<Record<string, PontuadoAthlete> | null>(null);
   const [partidasData, setPartidasData] = useState<PartidasResponse | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [substituicaoResult, setSubstituicaoResult] = useState<SubstituicaoResult | null>(response.substituicao ?? null);
+  const [salvandoSubstituicao, setSalvandoSubstituicao] = useState(false);
 
   const handleDelete = async () => {
     setShowDeleteModal(false);
@@ -47,27 +50,114 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     }
   };
 
+  const handleSimularSubstituicao = () => {
+    if (!pontuadosAtletas || !partidasData) {
+      Alert.alert('Aguardando', 'Carregando dados de pontuação...');
+      return;
+    }
+
+    const result = calcularSubstituicoes(
+      lineup,
+      pontuadosAtletas,
+      partidasData.partidas,
+      partidasData.clubes,
+    );
+
+    if (!result) {
+      Alert.alert('Sem substituições', 'Nenhum titular precisa ser substituído.');
+      return;
+    }
+
+    setSubstituicaoResult(result);
+  };
+
+  const handleSalvarSubstituicao = async () => {
+    if (!substituicaoResult) return;
+    setSalvandoSubstituicao(true);
+
+    try {
+      const novosPlayers = [...response.players];
+      const novasReservas = { ...response.reservas };
+
+      for (const sub of substituicaoResult.substituicoes) {
+        const idx = novosPlayers.findIndex((p) => p.atleta_id === sub.substituido_id);
+        if (idx === -1) continue;
+
+        const substituto = novasReservas[sub.posicao];
+        if (!substituto) continue;
+        const substituido = novosPlayers[idx];
+
+        novosPlayers[idx] = {
+          atleta_id: substituto.atleta_id,
+          apelido: substituto.apelido,
+          posicao: substituto.posicao,
+          preco: substituto.preco,
+          previsto: substituto.previsto,
+          clube: substituto.clube,
+        };
+
+        novasReservas[sub.posicao] = {
+          atleta_id: substituido.atleta_id,
+          apelido: substituido.apelido,
+          clube: substituido.clube,
+          posicao: substituido.posicao,
+          preco: substituido.preco,
+          previsto: 0,
+          media_num: 0,
+          jogos_num: 0,
+          variacao_num: 0,
+          potential_valorizacao: 0,
+          preco_projetado: 0,
+          tendencia: '',
+          eficiencia: 0,
+          luxo: sub.motivo === 'reserva_luxo',
+        };
+      }
+
+      const updatedResponse = {
+        ...response,
+        players: novosPlayers,
+        reservas: novasReservas,
+        pontos_previstos: substituicaoResult.pontos_finais,
+        orcamento_usado: response.orcamento_usado + substituicaoResult.patrimonio_ajuste,
+        substituicao: substituicaoResult,
+      };
+
+      const updatedLineup = {
+        ...lineup,
+        response: updatedResponse,
+      };
+
+      await saveLineup(updatedLineup);
+      Alert.alert('Salvo', 'Substituições aplicadas e salvas com sucesso!');
+      navigation.replace('LineupDetail', { lineup: updatedLineup });
+    } catch {
+      Alert.alert('Erro', 'Não foi possível salvar as substituições.');
+    } finally {
+      setSalvandoSubstituicao(false);
+    }
+  };
+
   useEffect(() => {
     fetchPontuados(lineup.rodada)
-      .then((data) => {
-        const scores: Record<string, number> = {};
-        for (const [id, athlete] of Object.entries(data.atletas)) {
-          scores[id] = athlete.pontuacao;
-        }
-        setActualScores(scores);
-      })
+      .then((data) => setPontuadosAtletas(data.atletas))
       .catch(() => {});
     fetchPartidas(lineup.rodada)
       .then(setPartidasData)
       .catch(() => {});
   }, [lineup.rodada]);
 
-  const getActual = (atleta_id: number): number | null => {
-    if (!actualScores) return null;
-    return actualScores[String(atleta_id)] ?? null;
+  const getPontuacao = (atleta_id: number): number | null => {
+    const p = pontuadosAtletas?.[String(atleta_id)];
+    return p ? p.pontuacao : null;
   };
 
-  const hasActual = actualScores !== null;
+  const entrouEmCampo = (atleta_id: number): boolean | null => {
+    const p = pontuadosAtletas?.[String(atleta_id)];
+    return p ? p.entrou_em_campo : null;
+  };
+
+  const hasPontuados = pontuadosAtletas !== null;
 
   const clubOpponents = useMemo(() => {
     if (!partidasData) return {};
@@ -88,13 +178,22 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     return clubOpponents[clube] ?? null;
   };
 
+  const getEntrouEmCampoColor = (atleta_id: number, isSubstituto?: boolean): string | undefined => {
+    if (isSubstituto) return theme.colors.primary;
+    if (entrouEmCampo(atleta_id) === false) return theme.colors.danger;
+    return undefined;
+  };
+
   const allPlayers = [
     ...response.players,
     ...(response.tecnico ? [response.tecnico] : []),
   ];
-  const totalReal = hasActual
-    ? allPlayers.reduce((sum, p) => sum + (getActual(p.atleta_id) ?? 0), 0)
+  const totalReal = hasPontuados
+    ? allPlayers.reduce((sum, p) => sum + (getPontuacao(p.atleta_id) ?? 0), 0)
     : null;
+
+  const substituidoIds = new Set(substituicaoResult?.substituicoes.map((s) => s.substituido_id) ?? []);
+  const substitutoIds = new Set(substituicaoResult?.substituicoes.map((s) => s.substituto_id) ?? []);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
@@ -151,15 +250,44 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       <SectionHeader label="Titulares" />
       {response.players.map((p: Player) => {
-        const real = getActual(p.atleta_id);
+        const pts = getPontuacao(p.atleta_id);
+        const foiSubstituido = substituidoIds.has(p.atleta_id);
+        const isSubstituto = substitutoIds.has(p.atleta_id);
+        const borderColor = foiSubstituido
+          ? theme.colors.danger
+          : isSubstituto
+            ? theme.colors.primary
+            : undefined;
         return (
-          <Card key={p.atleta_id} style={styles.playerCard}>
+          <Card
+            key={p.atleta_id}
+            style={[
+              styles.playerCard,
+              borderColor ? { borderColor, borderWidth: 1.5 } : undefined,
+            ]}
+          >
             <View style={styles.playerTop}>
-              <View>
-                <Text style={styles.playerPos}>
-                  {posicoes[p.posicao] || p.posicao}
-                </Text>
-                <Text style={styles.playerName}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.playerPosRow}>
+                  <Text style={styles.playerPos}>
+                    {posicoes[p.posicao] || p.posicao}
+                  </Text>
+                  {entrouEmCampo(p.atleta_id) === false && hasPontuados && (
+                    <Badge variant="danger" label="NÃO JOGOU" size="sm" />
+                  )}
+                  {foiSubstituido && (
+                    <Badge variant="danger" label="SUBSTITUÍDO" size="sm" />
+                  )}
+                  {isSubstituto && (
+                    <Badge variant="primary" label="ENTROU" size="sm" />
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.playerName,
+                    foiSubstituido ? { textDecorationLine: 'line-through', opacity: 0.6 } : undefined,
+                  ]}
+                >
                   {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
                 </Text>
                 {getDuelo(p.clube) && (
@@ -181,7 +309,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               <View style={styles.playerStat}>
                 <Text style={styles.playerStatValue}>
                   {p.previsto.toFixed(1)}
-                  {real !== null ? ` (${real.toFixed(1)})` : ''}
+                  {pts !== null ? ` (${pts.toFixed(1)})` : ''}
                 </Text>
                 <Text style={styles.playerStatLabel}>Projeção</Text>
               </View>
@@ -197,7 +325,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       })}
 
       {response.tecnico && (() => {
-        const real = getActual(response.tecnico.atleta_id);
+        const pts = getPontuacao(response.tecnico.atleta_id);
         return (
           <>
             <SectionHeader label="Técnico" />
@@ -217,7 +345,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                   </Text>
                   <Text style={styles.tecnicoPts}>
                     {response.tecnico.previsto.toFixed(1)}
-                    {real !== null ? ` (${real.toFixed(1)})` : ''} pts
+                    {pts !== null ? ` (${pts.toFixed(1)})` : ''} pts
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -232,11 +360,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         );
       })()}
 
-      {hasActual && (
+      {hasPontuados && (
         <Card highlight style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>
             Proj: {response.pontos_previstos.toFixed(1)} · Real: {totalReal!.toFixed(1)}
+            {substituicaoResult && substituicaoResult.pontos_finais !== totalReal
+              ? ` → ${substituicaoResult.pontos_finais.toFixed(1)} pts`
+              : ''}
           </Text>
         </Card>
       )}
@@ -295,6 +426,49 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             </Card>
           ))}
         </>
+      )}
+
+      {substituicaoResult && (
+        <>
+          <SectionHeader label="Substituições" />
+          <Card elevated>
+            <Text style={styles.resultOrcamento}>
+              Pontos: {substituicaoResult.pontos_originais.toFixed(1)} → {substituicaoResult.pontos_finais.toFixed(1)}
+              {' · '}Ajuste: {substituicaoResult.patrimonio_ajuste >= 0 ? '+' : ''}C$ {substituicaoResult.patrimonio_ajuste.toFixed(2)}
+            </Text>
+            {substituicaoResult.substituicoes.map((s, i) => (
+              <View key={i} style={styles.substituicaoRow}>
+                <Badge
+                  variant={s.motivo === 'nao_jogou' ? 'danger' : 'accent'}
+                  label={s.motivo === 'nao_jogou' ? 'NÃO JOGOU' : 'RESERVA LUXO'}
+                />
+                <Text style={styles.substituicaoText}>
+                  <Text style={{ color: theme.colors.danger }}>{s.substituido_apelido}</Text>
+                  {' → '}
+                  <Text style={{ color: theme.colors.primary }}>{s.substituto_apelido}</Text>
+                </Text>
+                <Text style={styles.substituicaoDetalhe}>
+                  {s.posicao} · {s.pontuacao_substituto > s.pontuacao_substituido ? '+' : ''}{(s.pontuacao_substituto - s.pontuacao_substituido).toFixed(1)} pts · C$ {s.diferenca_preco >= 0 ? '+' : ''}{s.diferenca_preco.toFixed(2)}
+                </Text>
+              </View>
+            ))}
+          </Card>
+
+          <Button
+            variant="primary"
+            label={salvandoSubstituicao ? 'Salvando...' : 'Salvar substituição'}
+            onPress={handleSalvarSubstituicao}
+            disabled={salvandoSubstituicao}
+          />
+        </>
+      )}
+
+      {hasPontuados && !substituicaoResult && (
+        <Button
+          variant="primary"
+          label="Simular substituição"
+          onPress={handleSimularSubstituicao}
+        />
       )}
 
       <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
@@ -614,5 +788,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,
+  },
+  playerPosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  substituicaoRow: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  substituicaoText: {
+    fontSize: theme.fontSize.base,
+    color: theme.colors.text,
+    marginTop: theme.spacing.xs,
+  },
+  substituicaoDetalhe: {
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
 });

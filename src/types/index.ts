@@ -58,6 +58,25 @@ export interface Tecnico {
   tendencia?: string;
 }
 
+export interface SubstituicaoInfo {
+  substituido_id: number;
+  substituido_apelido: string;
+  substituto_id: number;
+  substituto_apelido: string;
+  posicao: string;
+  motivo: 'nao_jogou' | 'reserva_luxo';
+  diferenca_preco: number;
+  pontuacao_substituido: number;
+  pontuacao_substituto: number;
+}
+
+export interface SubstituicaoResult {
+  substituicoes: SubstituicaoInfo[];
+  pontos_originais: number;
+  pontos_finais: number;
+  patrimonio_ajuste: number;
+}
+
 export interface OtimizarResponse {
   formacao: string;
   pontos_previstos: number;
@@ -71,6 +90,7 @@ export interface OtimizarResponse {
   foco?: number;
   perfil?: string;
   rodada?: number;
+  substituicao?: SubstituicaoResult;
 }
 
 export interface Lineup {
