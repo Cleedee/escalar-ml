@@ -243,36 +243,40 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         fetchClubes(),
       ]);
 
-      const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
-      const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
-      const precoCompra: Record<number, number> = {};
-      for (const a of teamData.atletas) {
-        precoCompra[a.atleta_id] = a.preco_num;
-      }
-
-      const projetada = await postProjetar({
-        atletas: fieldAtletas.map((a) => a.atleta_id),
-        tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
-        capitao_id: teamData.capitao_id,
-        rodada: rodadaAtual,
-        forcar: false,
-        preco_compra: precoCompra,
-      });
-
       const lineup = mapCartolaToLineup(teamData, clubes, rodadaAtual);
 
-      lineup.response.players = lineup.response.players.map((p) => {
-        const enriched = projetada.jogadores.find((j) => j.atleta_id === p.atleta_id);
-        return enriched ? { ...p, ...enriched } : p;
-      });
+      try {
+        const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
+        const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
+        const precoCompra: Record<number, number> = {};
+        for (const a of teamData.atletas) {
+          precoCompra[a.atleta_id] = a.preco_num;
+        }
 
-      const tecEnriched = projetada.tecnico;
-      if (tecEnriched?.atleta_id) {
-        Object.assign(lineup.response.tecnico, tecEnriched);
+        const projetada = await postProjetar({
+          atletas: fieldAtletas.map((a) => a.atleta_id),
+          tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
+          capitao_id: teamData.capitao_id,
+          rodada: rodadaAtual,
+          forcar: false,
+          preco_compra: precoCompra,
+        });
+
+        lineup.response.players = lineup.response.players.map((p) => {
+          const enriched = projetada.jogadores.find((j) => j.atleta_id === p.atleta_id);
+          return enriched ? { ...p, ...enriched } : p;
+        });
+
+        const tecEnriched = projetada.tecnico;
+        if (tecEnriched?.atleta_id) {
+          Object.assign(lineup.response.tecnico, tecEnriched);
+        }
+
+        lineup.response.pontos_previstos = projetada.pontos_previstos;
+        lineup.response.valorizacao_total = projetada.valorizacao_total;
+      } catch {
+        // enrichment is optional — keep basic lineup from mapCartolaToLineup
       }
-
-      lineup.response.pontos_previstos = projetada.pontos_previstos;
-      lineup.response.valorizacao_total = projetada.valorizacao_total;
 
       lineup.atribuido_a_team_id = team.id;
       lineup.nome = `${team.nome} (importado)`;
