@@ -11,6 +11,7 @@ import {
 import { MarketStatus, STATUS_MAP } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
+import { version as APP_VERSION } from '../../package.json';
 
 export default function StatusScreen() {
   const [status, setStatus] = useState<MarketStatus | null>(null);
@@ -49,6 +50,7 @@ export default function StatusScreen() {
           resizeMode="contain"
         />
         <Text style={styles.subtitle}>Status do Mercado</Text>
+        <Text style={styles.versionText}>EscalarML v{APP_VERSION}</Text>
       </View>
 
       {loading && (
@@ -140,6 +142,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     color: '#94a3b8',
+    marginTop: 2,
+  },
+  versionText: {
+    fontSize: 11,
+    color: '#475569',
     marginTop: 2,
   },
   center: {
