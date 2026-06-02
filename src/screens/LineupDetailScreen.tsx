@@ -44,7 +44,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       const result = await postProjetar(request);
 
       const enrichedPlayers = response.players.map((p: Player) => {
-        const enriched = result.jogadores.find((j) => j.atleta_id === p.atleta_id);
+        const enriched = ((result as any).jogadores ?? (result as any).players ?? []).find(
+          (j: any) => Number(j.atleta_id) === p.atleta_id,
+        );
         return enriched ? { ...p, ...enriched, role: p.role } : p;
       });
 
