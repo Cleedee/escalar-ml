@@ -298,6 +298,26 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       </TouchableOpacity>
 
       <TouchableOpacity
+        style={styles.newBtn}
+        onPress={() =>
+          navigation.navigate('NewLineup', {
+            rodada: lineup.rodada,
+            nome: `Nova ${lineup.nome}`,
+            orcamento: String(lineup.params?.orcamento ?? 100),
+            formacao: lineup.params?.formacao ?? 'auto',
+            perfil: lineup.params?.perfil ?? 'neutro',
+            foco: lineup.params?.foco ?? 1.0,
+            incluir_duvidosos: lineup.params?.incluir_duvidosos ?? false,
+            reserva_luxo: lineup.params?.reserva_luxo ?? true,
+            obrigarText: (lineup.params?.obrigar ?? []).join(','),
+            excluirText: (lineup.params?.excluir ?? []).join(','),
+          })
+        }
+      >
+        <Text style={styles.newBtnText}>Gerar nova escalação</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={styles.backBtn}
         onPress={() => navigation.goBack()}
       >
@@ -584,13 +604,25 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontWeight: '600',
   },
+  newBtn: {
+    backgroundColor: '#22c55e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  newBtnText: {
+    color: '#0f172a',
+    fontSize: 15,
+    fontWeight: '700',
+  },
   backBtn: {
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 12,
   },
   backBtnText: {
     color: '#94a3b8',

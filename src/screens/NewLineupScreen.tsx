@@ -39,15 +39,15 @@ const POS_MAP: Record<number, string> = {
 export default function NewLineupScreen({ route, navigation }: any) {
   const rodada = route.params?.rodada ?? 0;
 
-  const [nome, setNome] = useState(`Rodada ${rodada}`);
-  const [orcamento, setOrcamento] = useState('100');
-  const [formacao, setFormacao] = useState('auto');
-  const [perfil, setPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
-  const [foco, setFoco] = useState(1.0);
-  const [incluirDuvidosos, setIncluirDuvidosos] = useState(false);
-  const [reservaLuxo, setReservaLuxo] = useState(true);
-  const [obrigarText, setObrigarText] = useState('');
-  const [excluirText, setExcluirText] = useState('');
+  const [nome, setNome] = useState(route.params?.nome ?? `Rodada ${rodada}`);
+  const [orcamento, setOrcamento] = useState(route.params?.orcamento ?? '100');
+  const [formacao, setFormacao] = useState(route.params?.formacao ?? 'auto');
+  const [perfil, setPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>(route.params?.perfil ?? 'neutro');
+  const [foco, setFoco] = useState(route.params?.foco ?? 1.0);
+  const [incluirDuvidosos, setIncluirDuvidosos] = useState(route.params?.incluir_duvidosos ?? false);
+  const [reservaLuxo, setReservaLuxo] = useState(route.params?.reserva_luxo ?? true);
+  const [obrigarText, setObrigarText] = useState(route.params?.obrigarText ?? '');
+  const [excluirText, setExcluirText] = useState(route.params?.excluirText ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
