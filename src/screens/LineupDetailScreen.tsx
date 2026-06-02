@@ -181,6 +181,34 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       await saveLineup(updatedLineup);
 
+      // Enrich with /projetar
+      try {
+        const capitaoId = novosPlayers.find((p: Player) => p.role === 'capitao')?.atleta_id;
+        const projetada = await postProjetar({
+          atletas: novosPlayers.map((p: Player) => p.atleta_id),
+          tecnico_id: response.tecnico?.atleta_id ?? 0,
+          capitao_id: capitaoId ?? 0,
+          rodada: lineup.rodada,
+          forcar: false,
+        });
+
+        const enrichedPlayers = novosPlayers.map((p: Player) => {
+          const enriched = ((projetada as any).jogadores ?? (projetada as any).players ?? []).find(
+            (j: any) => Number(j.atleta_id) === p.atleta_id,
+          );
+          return enriched ? { ...p, ...enriched, role: p.role } : p;
+        });
+
+        updatedResponse.players = enrichedPlayers;
+        if (projetada.tecnico) updatedResponse.tecnico = projetada.tecnico;
+        updatedResponse.pontos_previstos = projetada.pontos_previstos;
+        updatedResponse.valorizacao_total = projetada.valorizacao_total;
+        updatedLineup.response = updatedResponse;
+        await saveLineup(updatedLineup);
+      } catch {
+        // enrichment non-fatal — substitution data already saved
+      }
+
       // Update team in league if linked
       if (lineup.atribuido_a_team_id) {
         const todosTitulares = [
