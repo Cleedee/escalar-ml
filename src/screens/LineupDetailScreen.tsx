@@ -102,6 +102,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </Text>
         <Text style={styles.resultOrcamento}>
           C$ {response.orcamento_usado.toFixed(2)} usados
+          {lineup.params?.orcamento != null ? ` (patrimônio C$ ${lineup.params.orcamento.toFixed(2)})` : ''}
           {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}C$ ${response.valorizacao_total.toFixed(2)}` : ''}
         </Text>
       </View>
