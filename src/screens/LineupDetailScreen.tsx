@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
-import { deleteLineup, saveLineup } from '../services/storage';
+import { deleteLineup, getLeagues, saveLeague, saveLineup } from '../services/storage';
 import { fetchPontuados, fetchPartidas } from '../services/api';
 import { calcularSubstituicoes } from '../services/substituicaoEngine';
 import { theme } from '../theme';
@@ -114,21 +114,52 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         };
       }
 
+      const novoOrcamento = response.orcamento_usado + substituicaoResult.patrimonio_ajuste;
+
       const updatedResponse = {
         ...response,
         players: novosPlayers,
         reservas: novasReservas,
         pontos_previstos: substituicaoResult.pontos_finais,
-        orcamento_usado: response.orcamento_usado + substituicaoResult.patrimonio_ajuste,
+        orcamento_usado: novoOrcamento,
         substituicao: substituicaoResult,
       };
 
       const updatedLineup = {
         ...lineup,
+        params: lineup.params ? { ...lineup.params, orcamento: novoOrcamento } : undefined,
         response: updatedResponse,
       };
 
       await saveLineup(updatedLineup);
+
+      // Update team in league if linked
+      if (lineup.atribuido_a_team_id) {
+        const leagues = await getLeagues();
+        for (const league of leagues) {
+          const teamIdx = league.times.findIndex((t) => t.id === lineup.atribuido_a_team_id);
+          if (teamIdx === -1) continue;
+
+          const team = { ...league.times[teamIdx] };
+          const ganhoPontos = substituicaoResult.pontos_finais - substituicaoResult.pontos_originais;
+
+          team.patrimonio += substituicaoResult.patrimonio_ajuste;
+
+          if (league.modalidade === 'pontuacao') {
+            team.ranking = Math.max(0, team.ranking + ganhoPontos);
+          }
+
+          team.total_acumulado = league.modalidade === 'patrimonio'
+            ? team.patrimonio
+            : team.ranking;
+
+          const updatedTimes = [...league.times];
+          updatedTimes[teamIdx] = team;
+          await saveLeague({ ...league, times: updatedTimes });
+          break;
+        }
+      }
+
       Alert.alert('Salvo', 'Substituições aplicadas e salvas com sucesso!');
       navigation.replace('LineupDetail', { lineup: updatedLineup });
     } catch {
