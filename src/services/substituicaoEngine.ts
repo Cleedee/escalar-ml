@@ -72,7 +72,7 @@ export function calcularSubstituicoes(
   let novosPlayers = [...response.players];
   let novasReservas = { ...response.reservas };
   let patrimonioAjuste = 0;
-  let pontosFinais = 0;
+  let capitaoId = novosPlayers.find((p) => p.role === 'capitao')?.atleta_id;
 
   // 1. Substituir titulares que não entraram em campo
   const naoJogaram = novosPlayers
@@ -109,7 +109,10 @@ export function calcularSubstituicoes(
 
     patrimonioAjuste += diffPreco;
 
-    // Replace in players
+    // Replace in players (propagate captain role)
+    const isCapitao = substitudo.role === 'capitao';
+    if (isCapitao) capitaoId = reserva.atleta_id;
+
     novosPlayers = novosPlayers.map((p) =>
       p.atleta_id === substitudo.atleta_id
         ? {
@@ -119,6 +122,7 @@ export function calcularSubstituicoes(
             preco: reserva.preco,
             previsto: reserva.previsto,
             clube: reserva.clube,
+            role: isCapitao ? 'capitao' : undefined,
           }
         : p,
     );
@@ -183,6 +187,9 @@ export function calcularSubstituicoes(
 
           patrimonioAjuste += diffPreco;
 
+          const isCapitao = piorTitular.role === 'capitao';
+          if (isCapitao) capitaoId = reservaLuxo.atleta_id;
+
           novosPlayers = novosPlayers.map((p) =>
             p.atleta_id === piorTitular!.atleta_id
               ? {
@@ -192,6 +199,7 @@ export function calcularSubstituicoes(
                   preco: reservaLuxo.preco,
                   previsto: reservaLuxo.previsto,
                   clube: reservaLuxo.clube,
+                  role: isCapitao ? 'capitao' : undefined,
                 }
               : p,
           );
@@ -219,23 +227,21 @@ export function calcularSubstituicoes(
 
   if (substituicoes.length === 0) return null;
 
-  // Calculate final points
-  const pontosOriginais = novosPlayers.reduce(
-    (s, p) => s + getPontuacao(p.atleta_id, pontuados),
-    0,
-  );
-  if (response.tecnico?.atleta_id) {
-    // Recalculate with original players for comparison
-  }
+  const ptsComBonus = (atleta_id: number, isCapitao: boolean): number => {
+    const pts = getPontuacao(atleta_id, pontuados);
+    return isCapitao ? pts * 1.5 : pts;
+  };
 
   // Calculate points using original players first
+  const capitaoOriginalId = response.players.find((p) => p.role === 'capitao')?.atleta_id;
+
   const ptsOrig = response.players.reduce(
-    (s, p) => s + getPontuacao(p.atleta_id, pontuados),
+    (s, p) => s + ptsComBonus(p.atleta_id, p.atleta_id === capitaoOriginalId),
     0,
   );
 
   const ptsFinais = novosPlayers.reduce(
-    (s, p) => s + getPontuacao(p.atleta_id, pontuados),
+    (s, p) => s + ptsComBonus(p.atleta_id, p.atleta_id === capitaoId),
     0,
   );
 

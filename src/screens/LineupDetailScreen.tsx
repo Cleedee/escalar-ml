@@ -94,6 +94,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           preco: substituto.preco,
           previsto: substituto.previsto,
           clube: substituto.clube,
+          role: substituido.role === 'capitao' ? 'capitao' : undefined,
         };
 
         novasReservas[sub.posicao] = {
@@ -145,8 +146,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           0,
         );
 
+        const capitaoId = novosPlayers.find((p) => p.role === 'capitao')?.atleta_id;
+        const ptsComBonus = (atleta_id: number) => {
+          const pts = getPontuacao(atleta_id) ?? 0;
+          return atleta_id === capitaoId ? pts * 1.5 : pts;
+        };
+
         const pontuacaoTotal = todosTitulares.reduce(
-          (sum, p) => sum + (getPontuacao(p.atleta_id) ?? 0),
+          (sum, p) => sum + ptsComBonus(p.atleta_id),
           0,
         );
 
@@ -231,12 +238,19 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     return undefined;
   };
 
+  const capitaoId = response.players.find((p) => p.role === 'capitao')?.atleta_id;
+  const ptsComBonus = (atleta_id: number): number => {
+    const pts = getPontuacao(atleta_id) ?? 0;
+    return atleta_id === capitaoId ? pts * 1.5 : pts;
+  };
+
   const allPlayers = [
     ...response.players,
     ...(response.tecnico ? [response.tecnico] : []),
   ];
   const totalReal = hasPontuados
-    ? allPlayers.reduce((sum, p) => sum + (getPontuacao(p.atleta_id) ?? 0), 0)
+    ? (substituicaoResult?.pontos_finais ??
+       allPlayers.reduce((sum, p) => sum + ptsComBonus(p.atleta_id), 0))
     : null;
 
   const substituidoIds = new Set(substituicaoResult?.substituicoes.map((s) => s.substituido_id) ?? []);
@@ -356,7 +370,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               <View style={styles.playerStat}>
                 <Text style={styles.playerStatValue}>
                   {p.previsto.toFixed(1)}
-                  {pts !== null ? ` (${pts.toFixed(1)})` : ''}
+                  {pts !== null ? ` (${p.role === 'capitao' ? (pts * 1.5).toFixed(1) : pts.toFixed(1)})` : ''}
                 </Text>
                 <Text style={styles.playerStatLabel}>Projeção</Text>
               </View>
