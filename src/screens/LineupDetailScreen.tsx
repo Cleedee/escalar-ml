@@ -26,7 +26,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [pontuadosAtletas, setPontuadosAtletas] = useState<Record<string, PontuadoAthlete> | null>(null);
   const [partidasData, setPartidasData] = useState<PartidasResponse | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [substituicaoResult, setSubstituicaoResult] = useState<SubstituicaoResult | null>(response.substituicao ?? null);
+  const [substituicaoResult, setSubstituicaoResult] = useState<SubstituicaoResult | null>(null);
   const [salvandoSubstituicao, setSalvandoSubstituicao] = useState(false);
 
   const handleDelete = async () => {
@@ -193,13 +193,16 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   };
 
   useEffect(() => {
+    setSubstituicaoResult(response.substituicao ?? null);
+    setPontuadosAtletas(null);
+    setPartidasData(null);
     fetchPontuados(lineup.rodada)
       .then((data) => setPontuadosAtletas(data.atletas))
       .catch(() => {});
     fetchPartidas(lineup.rodada)
       .then(setPartidasData)
       .catch(() => {});
-  }, [lineup.rodada]);
+  }, [lineup.id]);
 
   const getPontuacao = (atleta_id: number): number | null => {
     const p = pontuadosAtletas?.[String(atleta_id)];
