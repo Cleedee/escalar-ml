@@ -357,6 +357,7 @@ export interface CartolaTeamResponse {
   atletas: CartolaAthlete[];
   capitao_id: number;
   reserva_luxo_id: number | null;
+  reservas: CartolaAthlete[];
   patrimonio: number;
   pontos: number;
   esquema_id: number;

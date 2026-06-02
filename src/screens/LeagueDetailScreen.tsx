@@ -35,17 +35,9 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
 
   const fc = (id: number) => clubMap[id] || String(id);
 
-  const fieldAtletas = res.atletas.filter((a) => a.posicao_id !== 6);
+  const starters = res.atletas.filter((a) => a.posicao_id !== 6);
   const tecAtletas = res.atletas.filter((a) => a.posicao_id === 6);
-
-  fieldAtletas.sort((a, b) => {
-    if (a.posicao_id !== b.posicao_id) return a.posicao_id - b.posicao_id;
-    return b.preco_num - a.preco_num;
-  });
-
-  const numStarters = Math.min(11, fieldAtletas.length);
-  const starters = fieldAtletas.slice(0, numStarters);
-  const bench = fieldAtletas.slice(numStarters);
+  const bench = res.reservas || [];
 
   const players: Player[] = starters.map((atleta) => ({
     atleta_id: atleta.atleta_id,
@@ -250,6 +242,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
         const precoCompra: Record<number, number> = {};
         for (const a of teamData.atletas) {
+          precoCompra[a.atleta_id] = a.preco_num;
+        }
+        for (const a of teamData.reservas || []) {
           precoCompra[a.atleta_id] = a.preco_num;
         }
 
