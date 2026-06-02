@@ -50,6 +50,7 @@ export interface Tecnico {
   atleta_id: number;
   preco: number;
   previsto: number;
+  variacao_num?: number;
   potential_valorizacao?: number;
   preco_projetado?: number;
   media_num?: number;

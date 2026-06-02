@@ -141,7 +141,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         ];
 
         const valorizacaoTotal = todosTitulares.reduce(
-          (sum, p) => sum + Math.max(0, (p.preco_projetado ?? p.preco) - p.preco),
+          (sum, p) => sum + Math.max(0, p.variacao_num ?? 0),
           0,
         );
 
