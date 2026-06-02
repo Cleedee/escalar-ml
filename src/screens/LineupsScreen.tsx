@@ -147,7 +147,8 @@ export default function LineupsScreen({ navigation }: any) {
                   {new Date(item.created_at).toLocaleDateString('pt-BR')}
                 </Text>
                 <Text style={styles.cardOrcamento}>
-                  C$ {item.response.orcamento_usado.toFixed(2)}
+                  C$ {item.response.orcamento_usado.toFixed(2)} usados
+                  {item.params?.orcamento != null ? ` (patrimônio C$ ${item.params.orcamento.toFixed(2)})` : ''}
                 </Text>
               </View>
             </TouchableOpacity>
