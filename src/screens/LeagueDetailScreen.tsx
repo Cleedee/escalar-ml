@@ -146,6 +146,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [perfilBot, setPerfilBot] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
   const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
   const [botLoading, setBotLoading] = useState(false);
+  const [consolidando, setConsolidando] = useState(false);
+  const [consolidacaoLog, setConsolidacaoLog] = useState<string[]>([]);
   const [rodadaAtual, setRodadaAtual] = useState(1);
   const [rodadaSelecionada, setRodadaSelecionada] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
@@ -384,7 +386,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setGerenciandoBot(null);
   };
 
-  function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team): { params: OtimizarParams; response: Lineup['response'] } {
+  function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team, perfil: string, foco: number): { params: OtimizarParams; response: Lineup['response'] } {
     const mapPlayer = (p: BotEscalarResponse['players'][0]): Player => ({
       atleta_id: p.atleta_id,
       apelido: p.apelido,
@@ -429,8 +431,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       params: {
         orcamento: bot.patrimonio,
         formacao: botRes.formacao,
-        perfil: editPerfil,
-        foco: editFoco,
+        perfil,
+        foco,
         incluir_duvidosos: false,
         reserva_luxo: true,
       },
@@ -476,7 +478,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       const existingIdx = lineups.findIndex(
         (l) => l.atribuido_a_team_id === bot.id && l.rodada === rodadaAtual
       );
-      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot);
+      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot, editPerfil, editFoco);
       const lineup: Lineup = {
         id: existingIdx >= 0 ? lineups[existingIdx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome: `${bot.nome} - R${rodadaAtual}`,
@@ -493,6 +495,131 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     } catch (e: any) {
     } finally {
       setBotLoading(false);
+    }
+  };
+
+  const handleConsolidarRodada = async () => {
+    setConsolidando(true);
+    setConsolidacaoLog([]);
+    const log = (msg: string) => setConsolidacaoLog((prev) => [...prev, msg]);
+    const rodada = rodadaSelecionada;
+
+    let importados = 0;
+    let botsCriados = 0;
+    let botsPulados = 0;
+    let ignorados = 0;
+    let erros = 0;
+
+    try {
+      const lineupsExistentes = await getLineups();
+      let novoLineups = [...lineupsExistentes];
+
+      for (const team of league.times) {
+        if (team.time_id) {
+          // Cartola team — fetch lineup for the round
+          try {
+            const [teamData, clubes] = await Promise.all([
+              fetchTeamById(team.time_id),
+              fetchClubes(),
+            ]);
+            const lineup = mapCartolaToLineup(teamData, clubes, rodada);
+            lineup.atribuido_a_team_id = team.id;
+            lineup.nome = `${team.nome} (R${rodada})`;
+
+            const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
+            const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
+            try {
+              const projetada = await postProjetar({
+                atletas: fieldAtletas.map((a) => a.atleta_id),
+                tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
+                capitao_id: teamData.capitao_id,
+                rodada,
+                forcar: false,
+              });
+              lineup.response.players = lineup.response.players.map((p) => {
+                const enriched = (projetada as any).jogadores?.find((j: any) => Number(j.atleta_id) === p.atleta_id)
+                  ?? (projetada as any).players?.find((j: any) => Number(j.atleta_id) === p.atleta_id);
+                return enriched ? { ...p, ...enriched } : p;
+              });
+              if (projetada.tecnico) Object.assign(lineup.response.tecnico, projetada.tecnico);
+              lineup.response.pontos_previstos = projetada.pontos_previstos;
+              lineup.response.valorizacao_total = projetada.valorizacao_total;
+            } catch {}
+            await saveLineup(lineup);
+            const existingIdx = novoLineups.findIndex(
+              (l) => l.atribuido_a_team_id === team.id && l.rodada === rodada,
+            );
+            if (existingIdx >= 0) novoLineups[existingIdx] = lineup;
+            else novoLineups.push(lineup);
+            importados++;
+            log(`✅ ${team.nome}: escalação importada do Cartola`);
+          } catch {
+            erros++;
+            log(`❌ ${team.nome}: erro ao importar do Cartola`);
+          }
+        } else if (team.is_bot && team.estrategia) {
+          // Bot with strategy
+          const jaTemLineup = lineupsExistentes.some(
+            (l) => l.atribuido_a_team_id === team.id && l.rodada === rodada,
+          );
+          if (jaTemLineup) {
+            botsPulados++;
+            log(`⏭️ ${team.nome}: já possui escalação para R${rodada}`);
+            continue;
+          }
+          try {
+            const lider = league.times[0];
+            const proximo = league.times.find(
+              (t) => t.total_acumulado > team.total_acumulado && t.id !== team.id,
+            );
+            const params: BotEscalarRequest = {
+              nome: team.nome,
+              orcamento_atual: team.patrimonio,
+              total_pontos: team.total_acumulado,
+              posicao: team.posicao || league.times.length,
+              total_participantes: league.times.length,
+              rodada_atual: rodada,
+              rodada_inicio: league.rodada_inicial,
+              rodada_fim: league.rodada_final,
+              pontos_lider: lider?.total_acumulado || 0,
+              pontos_proximo: proximo ? proximo.total_acumulado - team.total_acumulado : 0,
+              modalidade: league.modalidade,
+              estrategia: team.estrategia === 'manual'
+                ? { perfil: team.perfil || 'neutro', foco: team.foco ?? 1.0 }
+                : 'auto',
+            };
+            const result = await postBotEscalar(params);
+            const { params: otimizarParams, response } = mapBotResponseToLineup(result, team, team.perfil || 'neutro', team.foco ?? 1.0);
+            const lineup: Lineup = {
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              nome: `${team.nome} - R${rodada}`,
+              rodada,
+              atribuido_a_team_id: team.id,
+              created_at: new Date().toISOString(),
+              params: otimizarParams,
+              response,
+              estrategia: result.estrategia,
+            };
+            await saveLineup(lineup);
+            novoLineups.push(lineup);
+            botsCriados++;
+            log(`🤖 ${team.nome}: escalação gerada pelo bot`);
+          } catch {
+            erros++;
+            log(`❌ ${team.nome}: erro ao escalar bot`);
+          }
+        } else {
+          ignorados++;
+          log(`— ${team.nome}: sem Cartola ID ou bot sem estratégia, ignorado`);
+        }
+      }
+
+      log(`\nResumo: ${importados} importados, ${botsCriados} bots criados, ${botsPulados} bots pulados, ${ignorados} ignorados, ${erros} erros`);
+    } catch {
+      log('❌ Erro inesperado durante consolidação');
+    } finally {
+      setConsolidando(false);
+      await getLineups().then(setLineups).catch(() => {});
     }
   };
 
@@ -602,7 +729,32 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
       <Button variant="primary" label="+ Adicionar Time" onPress={openNew} />
 
+      <Button
+        variant="primary"
+        label={consolidando ? "Consolidando..." : "Consolidar rodada"}
+        onPress={handleConsolidarRodada}
+        disabled={consolidando}
+      />
+
       <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
+
+      <Modal visible={consolidando || consolidacaoLog.length > 0} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Consolidando rodada {rodadaSelecionada}…</Text>
+            <ScrollView style={{ maxHeight: 300, marginVertical: 16 }}>
+              {consolidacaoLog.map((msg, i) => (
+                <Text key={i} style={{ color: theme.colors.text, fontSize: 13, lineHeight: 20 }}>
+                  {msg}
+                </Text>
+              ))}
+            </ScrollView>
+            {!consolidando && (
+              <Button variant="primary" label="Fechar" onPress={() => setConsolidacaoLog([])} />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showTeamForm} transparent animationType="fade">
         <View style={styles.modalOverlay}>
