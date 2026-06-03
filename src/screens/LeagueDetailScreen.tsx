@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, TeamSearchResult, Tecnico, Team } from '../types';
-import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar } from '../services/api';
+import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
+import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 import { theme } from '../theme';
 import Card from '../components/Card';
@@ -149,6 +149,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [consolidando, setConsolidando] = useState(false);
   const [consolidacaoLog, setConsolidacaoLog] = useState<string[]>([]);
   const [rodadaAtual, setRodadaAtual] = useState(1);
+  const [statusMercado, setStatusMercado] = useState(0);
   const [rodadaSelecionada, setRodadaSelecionada] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
   const [editFoco, setEditFoco] = useState(1.0);
@@ -161,6 +162,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       fetchStatus()
         .then((s) => {
           setRodadaAtual(s.rodada_atual);
+          setStatusMercado(s.status_mercado);
           if (firstFocus.current) {
             setRodadaSelecionada(s.rodada_atual);
             firstFocus.current = false;
@@ -511,11 +513,13 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     let ignorados = 0;
     let erros = 0;
 
-    const enrichLineup = async (lineup: Lineup) => {
+    const processLineup = async (lineup: Lineup, team: Team) => {
       const ids = lineup.response.players.map((p: Player) => p.atleta_id);
       const tecnicoId = lineup.response.tecnico?.atleta_id ?? 0;
       const capitaoId = lineup.response.players.find((p: Player) => p.role === 'capitao')?.atleta_id ?? 0;
       if (ids.length === 0) return;
+
+      // Enrich with projected data
       try {
         const projetada = await postProjetar({
           atletas: ids,
@@ -533,6 +537,46 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         lineup.response.pontos_previstos = projetada.pontos_previstos;
         lineup.response.valorizacao_total = projetada.valorizacao_total;
       } catch {}
+
+      // Get real scores from /resultado
+      let totalPontos = 0;
+      let valorizacaoParaLiga = 0;
+      try {
+        const resultado = await postResultado({
+          atletas: ids,
+          tecnico_id: tecnicoId,
+          capitao_id: capitaoId,
+          rodada,
+        });
+        totalPontos = resultado.total_pontos;
+
+        // Sum individual variation (preco_depois - preco_antes) for starters + coach
+        for (const j of resultado.jogadores) {
+          valorizacaoParaLiga += Math.max(0, j.variacao);
+        }
+        valorizacaoParaLiga += Math.max(0, resultado.tecnico.variacao);
+
+        // Update team in league
+        const teams = [...league.times];
+        const teamIdx = teams.findIndex((t) => t.id === team.id);
+        if (teamIdx >= 0) {
+          teams[teamIdx] = {
+            ...teams[teamIdx],
+            patrimonio: teams[teamIdx].patrimonio + valorizacaoParaLiga,
+          };
+          if (league.modalidade === 'patrimonio') {
+            teams[teamIdx].ranking = teams[teamIdx].patrimonio;
+          } else {
+            teams[teamIdx].ranking = teams[teamIdx].total_acumulado + totalPontos;
+          }
+          teams[teamIdx].total_acumulado = league.modalidade === 'patrimonio'
+            ? teams[teamIdx].patrimonio
+            : teams[teamIdx].ranking;
+          await saveLeague({ ...league, times: teams });
+        }
+      } catch {
+        // /resultado not available (rodada not finished or API error) — skip league update
+      }
     };
 
     try {
@@ -540,7 +584,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
       for (const team of league.times) {
         if (team.time_id) {
-          // Cartola team — fetch lineup for the round
           try {
             const [teamData, clubes] = await Promise.all([
               fetchTeamById(team.time_id),
@@ -549,7 +592,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             const lineup = mapCartolaToLineup(teamData, clubes, rodada);
             lineup.atribuido_a_team_id = team.id;
             lineup.nome = `${team.nome} (R${rodada})`;
-            await enrichLineup(lineup);
+            await processLineup(lineup, team);
             await saveLineup(lineup);
             importados++;
             log(`✅ ${team.nome}: escalação importada do Cartola`);
@@ -563,7 +606,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
           );
           if (jaTemLineup) {
             botsPulados++;
-            await enrichLineup(jaTemLineup);
+            await processLineup(jaTemLineup, team);
             await saveLineup(jaTemLineup);
             log(`⏭️ ${team.nome}: já possui escalação, projeções atualizadas`);
             continue;
@@ -601,6 +644,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               response,
               estrategia: result.estrategia,
             };
+            await processLineup(lineup, team);
             await saveLineup(lineup);
             botsCriados++;
             log(`🤖 ${team.nome}: escalação gerada pelo bot`);
@@ -614,7 +658,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
           );
           if (existing) {
             atualizados++;
-            await enrichLineup(existing);
+            await processLineup(existing, team);
             await saveLineup(existing);
             log(`🔄 ${team.nome}: projeções atualizadas`);
           } else {
@@ -632,6 +676,17 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       await getLineups().then(setLineups).catch(() => {});
     }
   };
+
+  const rodadaFutura = rodadaSelecionada > rodadaAtual;
+  const rodadaEmAndamento = rodadaSelecionada === rodadaAtual && statusMercado !== 3;
+  const consolidarDesabilitado = consolidando || rodadaFutura || rodadaEmAndamento;
+  const consolidarLabel = rodadaFutura
+    ? 'Rodada futura'
+    : rodadaEmAndamento
+      ? 'Aguardar fim da rodada'
+      : consolidando
+        ? 'Consolidando...'
+        : 'Consolidar rodada';
 
   return (
     <View style={styles.container}>
@@ -741,9 +796,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
       <Button
         variant="primary"
-        label={consolidando ? "Consolidando..." : "Consolidar rodada"}
+        label={consolidarLabel}
         onPress={handleConsolidarRodada}
-        disabled={consolidando}
+        disabled={consolidarDesabilitado}
       />
 
       <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />

@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, ProjetarRequest, ProjetarResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 const RETRYABLE_CODES = new Set([502, 503, 504]);
 
@@ -111,6 +111,21 @@ export async function postBotEscalar(params: BotEscalarRequest): Promise<BotEsca
 
 export async function postProjetar(params: ProjetarRequest): Promise<ProjetarResponse> {
   const res = await fetch(`${API_BASE}/projetar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function postResultado(params: {
+  atletas: number[];
+  tecnico_id: number;
+  capitao_id: number;
+  rodada: number;
+}): Promise<ResultadoResponse> {
+  const res = await fetch(`${API_BASE}/resultado`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),

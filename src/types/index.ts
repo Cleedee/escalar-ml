@@ -402,6 +402,33 @@ export interface ProjetarResponse {
   tecnico: Tecnico;
 }
 
+export interface ResultadoResponse {
+  total_pontos: number;
+  valorizacao_total: number;
+  jogadores: Array<{
+    atleta_id: number;
+    apelido: string;
+    clube: string;
+    posicao: string;
+    pontos: number;
+    preco_antes: number;
+    preco_depois: number;
+    variacao: number;
+    capitao: boolean;
+    contribuicao: number;
+    bonus_capitao?: number;
+  }>;
+  tecnico: {
+    atleta_id: number;
+    apelido: string;
+    clube: string;
+    pontos: number;
+    preco_antes: number;
+    preco_depois: number;
+    variacao: number;
+  };
+}
+
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
   1: { label: 'Mercado Aberto', color: '#22c55e' },
   2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },
