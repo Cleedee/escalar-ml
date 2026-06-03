@@ -507,12 +507,36 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     let importados = 0;
     let botsCriados = 0;
     let botsPulados = 0;
+    let atualizados = 0;
     let ignorados = 0;
     let erros = 0;
 
+    const enrichLineup = async (lineup: Lineup) => {
+      const ids = lineup.response.players.map((p: Player) => p.atleta_id);
+      const tecnicoId = lineup.response.tecnico?.atleta_id ?? 0;
+      const capitaoId = lineup.response.players.find((p: Player) => p.role === 'capitao')?.atleta_id ?? 0;
+      if (ids.length === 0) return;
+      try {
+        const projetada = await postProjetar({
+          atletas: ids,
+          tecnico_id: tecnicoId,
+          capitao_id: capitaoId,
+          rodada,
+          forcar: false,
+        });
+        lineup.response.players = lineup.response.players.map((p: Player) => {
+          const enriched = (projetada as any).jogadores?.find((j: any) => Number(j.atleta_id) === p.atleta_id)
+            ?? (projetada as any).players?.find((j: any) => Number(j.atleta_id) === p.atleta_id);
+          return enriched ? { ...p, ...enriched, role: p.role } : p;
+        });
+        if (projetada.tecnico) Object.assign(lineup.response.tecnico, projetada.tecnico);
+        lineup.response.pontos_previstos = projetada.pontos_previstos;
+        lineup.response.valorizacao_total = projetada.valorizacao_total;
+      } catch {}
+    };
+
     try {
       const lineupsExistentes = await getLineups();
-      let novoLineups = [...lineupsExistentes];
 
       for (const team of league.times) {
         if (team.time_id) {
@@ -525,32 +549,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             const lineup = mapCartolaToLineup(teamData, clubes, rodada);
             lineup.atribuido_a_team_id = team.id;
             lineup.nome = `${team.nome} (R${rodada})`;
-
-            const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
-            const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
-            try {
-              const projetada = await postProjetar({
-                atletas: fieldAtletas.map((a) => a.atleta_id),
-                tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
-                capitao_id: teamData.capitao_id,
-                rodada,
-                forcar: false,
-              });
-              lineup.response.players = lineup.response.players.map((p) => {
-                const enriched = (projetada as any).jogadores?.find((j: any) => Number(j.atleta_id) === p.atleta_id)
-                  ?? (projetada as any).players?.find((j: any) => Number(j.atleta_id) === p.atleta_id);
-                return enriched ? { ...p, ...enriched } : p;
-              });
-              if (projetada.tecnico) Object.assign(lineup.response.tecnico, projetada.tecnico);
-              lineup.response.pontos_previstos = projetada.pontos_previstos;
-              lineup.response.valorizacao_total = projetada.valorizacao_total;
-            } catch {}
+            await enrichLineup(lineup);
             await saveLineup(lineup);
-            const existingIdx = novoLineups.findIndex(
-              (l) => l.atribuido_a_team_id === team.id && l.rodada === rodada,
-            );
-            if (existingIdx >= 0) novoLineups[existingIdx] = lineup;
-            else novoLineups.push(lineup);
             importados++;
             log(`✅ ${team.nome}: escalação importada do Cartola`);
           } catch {
@@ -558,13 +558,14 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             log(`❌ ${team.nome}: erro ao importar do Cartola`);
           }
         } else if (team.is_bot && team.estrategia) {
-          // Bot with strategy
-          const jaTemLineup = lineupsExistentes.some(
+          const jaTemLineup = lineupsExistentes.find(
             (l) => l.atribuido_a_team_id === team.id && l.rodada === rodada,
           );
           if (jaTemLineup) {
             botsPulados++;
-            log(`⏭️ ${team.nome}: já possui escalação para R${rodada}`);
+            await enrichLineup(jaTemLineup);
+            await saveLineup(jaTemLineup);
+            log(`⏭️ ${team.nome}: já possui escalação, projeções atualizadas`);
             continue;
           }
           try {
@@ -601,7 +602,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               estrategia: result.estrategia,
             };
             await saveLineup(lineup);
-            novoLineups.push(lineup);
             botsCriados++;
             log(`🤖 ${team.nome}: escalação gerada pelo bot`);
           } catch {
@@ -609,12 +609,22 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             log(`❌ ${team.nome}: erro ao escalar bot`);
           }
         } else {
-          ignorados++;
-          log(`— ${team.nome}: sem Cartola ID ou bot sem estratégia, ignorado`);
+          const existing = lineupsExistentes.find(
+            (l) => l.atribuido_a_team_id === team.id && l.rodada === rodada,
+          );
+          if (existing) {
+            atualizados++;
+            await enrichLineup(existing);
+            await saveLineup(existing);
+            log(`🔄 ${team.nome}: projeções atualizadas`);
+          } else {
+            ignorados++;
+            log(`— ${team.nome}: sem escalação, Cartola ID ou estratégia, ignorado`);
+          }
         }
       }
 
-      log(`\nResumo: ${importados} importados, ${botsCriados} bots criados, ${botsPulados} bots pulados, ${ignorados} ignorados, ${erros} erros`);
+      log(`\nResumo: ${importados} importados, ${botsCriados} bots, ${botsPulados} bots com escalação, ${atualizados} com projeções atualizadas, ${ignorados} ignorados, ${erros} erros`);
     } catch {
       log('❌ Erro inesperado durante consolidação');
     } finally {
