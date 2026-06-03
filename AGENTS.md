@@ -35,6 +35,8 @@ Dev override in `src/config.ts`: `https://escalar-no-cartola.onrender.com` (auto
 
 **Important:** all `/cartola/*` endpoints are proxy-only (ephemeral cache). The `/otimizar` endpoint is the computation engine.
 
+**Undocumented endpoints (discovered during testing):** `POST /resultado` — returns real scores for a lineup (same shape as `/projetar` but with `pontos` reais instead of `previsto`). Requires `atletas`, `tecnico_id`, `rodada`. Returns `total_pontos`, `valorizacao_total` (always 0.0), `jogadores[]`, `tecnico`, `scouts`, `params`.
+
 ## Architecture rules
 
 - **No authentication** — API key is optional, not implemented.
@@ -291,7 +293,7 @@ Called from `LeagueDetailScreen`. Converts `CartolaTeamResponse` into a `Lineup`
 Bots in leagues can be configured with strategy (auto/manual), foco, and perfil. `LeagueDetailScreen` lets you manage bots and escalate them via `POST /bot/escalar`.
 
 ### Actual scores in LineupDetail
-`LineupDetailScreen` fetches `GET /cartola/pontuados/{rodada}` and `GET /cartola/partidas/{rodada}` to show real vs projected scores and match duels.
+`LineupDetailScreen` fetches `GET /cartola/pontuados/{rodada}` and `GET /cartola/partidas/{rodada}` in a `useEffect` keyed on `lineup.id` (not `rodada`) to show real vs projected scores and match duels. Prevents stale data when navigating between different lineups for the same round.
 
 ### Export JSON
 LineupDetailScreen has an "Exportar JSON" button that copies the full lineup as JSON to the clipboard via `expo-clipboard`.
@@ -301,6 +303,24 @@ From any player in a lineup, tapping the "i" button navigates to `JustificarScre
 
 ### Forçar / Obrigar / Excluir
 The `NewLineupScreen` allows forcing specific athletes (`obrigar`) or excluding them (`excluir`) via comma-separated IDs, with a search modal to find athletes by name.
+
+### Refresh projections button
+`LineupDetailScreen` has an "Atualizar projeções" button that calls `POST /projetar` with the current starters + coach + captain. Enriches `pontos_previstos`, `valorizacao_total`, `players` (preserving `role`), and `tecnico`. Handles both `jogadores` and `players` field names in the API response. Uses `Number()` coercion on `atleta_id` for safe comparison.
+
+### Substitution preserves enriched fields
+When `handleSalvarSubstituicao` promotes a reserva to starter (lines 130-145), it copies all enriched fields (`preco_projetado`, `variacao_num`, `potential_valorizacao`, `media_num`, `jogos_num`, `tendencia`, `eficiencia`) from the reserva object. Previously only 7 basic fields were copied.
+
+### Substitution triggers /projetar enrichment
+After saving a substitution (lines 184-210), the code calls `POST /projetar` with the new starter list to update `pontos_previstos`, `valorizacao_total`, `players`, and `tecnico` with fresh projections. Non-fatal — the substitution is already saved if enrichment fails.
+
+### Button layout
+Buttons in `LineupDetailScreen` are organized in three groups:
+1. **Refinar escalação atual** — "Atualizar projeções" + "Simular substituição" / "Salvar substituição"
+2. **Criar/exportar** — "Gerar nova escalação" (primary) → "Exportar JSON" (outline)
+3. **Navegação** — "Voltar" + "Excluir escalação" side by side using `bottomButtons` style (flexDirection row, gap)
+
+### State reset on lineup change
+`LineupDetailScreen` resets `substituicaoResult`, `pontuadosAtletas`, and `partidasData` via `useEffect` keyed on `lineup.id` instead of `lineup.rodada`. Prevents stale substitution data from a previous lineup when navigating across tabs.
 
 ## Development
 
