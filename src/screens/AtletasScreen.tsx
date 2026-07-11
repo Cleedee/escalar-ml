@@ -254,18 +254,19 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderLight,
   },
   filterList: {
-    maxHeight: 38,
+    maxHeight: 46,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
   },
   filterChip: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     backgroundColor: theme.colors.surfaceElevated,
-    marginRight: theme.spacing.xs,
+    marginRight: theme.spacing.sm,
+    justifyContent: 'center',
   },
   filterChipActive: {
     borderColor: theme.colors.primary,
@@ -273,11 +274,12 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.text,
   },
   filterChipTextActive: {
     color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
+    fontWeight: theme.fontWeight.bold,
   },
   resultCount: {
     fontSize: theme.fontSize.sm,

@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textMuted,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     flex: 1,
