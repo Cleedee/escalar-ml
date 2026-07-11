@@ -1,6 +1,6 @@
 # EscalarML — App Mobile
 
-**Nome definitivo:** EscalarML (sem "Cartola" no nome).
+**Nome definitivo:** EscalarML.
 
 React Native (Expo, TypeScript) app.
 

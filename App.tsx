@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform, Text, StatusBar } from 'react-native';
 import { theme } from './src/theme';
 import StatusScreen from './src/screens/StatusScreen';
+import StatusDetailScreen from './src/screens/StatusDetailScreen';
 import LineupsScreen from './src/screens/LineupsScreen';
 import NewLineupScreen from './src/screens/NewLineupScreen';
 import LineupDetailScreen from './src/screens/LineupDetailScreen';
@@ -14,8 +15,18 @@ import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
 import HelpScreen from './src/screens/HelpScreen';
 
 const Tab = createBottomTabNavigator();
+const StatusStackNav = createNativeStackNavigator();
 const Stack1 = createNativeStackNavigator();
 const Stack2 = createNativeStackNavigator();
+
+function StatusStack() {
+  return (
+    <StatusStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <StatusStackNav.Screen name="StatusMain" component={StatusScreen} />
+      <StatusStackNav.Screen name="StatusDetail" component={StatusDetailScreen} />
+    </StatusStackNav.Navigator>
+  );
+}
 
 function LineupsStack() {
   return (
@@ -70,7 +81,7 @@ export default function App() {
       >
         <Tab.Screen
           name="Status"
-          component={StatusScreen}
+          component={StatusStack}
           options={{
             tabBarIcon: ({ color }) => (
               <Text style={{ fontSize: 18, color }}>⚡</Text>

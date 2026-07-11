@@ -6,15 +6,13 @@ import {
   View,
   Image,
   ActivityIndicator,
-  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { MarketStatus, STATUS_MAP } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
 import { version as APP_VERSION } from '../../package.json';
 import { theme } from '../theme';
-import Card from '../components/Card';
-import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
 
 const BADGE_VARIANT: Record<number, 'primary' | 'warning' | 'info' | 'danger' | 'neutral'> = {
@@ -25,7 +23,7 @@ const BADGE_VARIANT: Record<number, 'primary' | 'warning' | 'info' | 'danger' | 
   5: 'danger',
 };
 
-export default function StatusScreen() {
+export default function StatusScreen({ navigation }: any) {
   const [status, setStatus] = useState<MarketStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,51 +82,33 @@ export default function StatusScreen() {
       )}
 
       {status && !loading && (
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentInner}
-        >
-          <Card
-            style={{
-              borderColor: statusInfo?.color ?? '#333',
-              borderWidth: 1.5,
-              marginBottom: theme.spacing['2xl'],
-            }}
+        <View style={styles.statusContainer}>
+          <View
+            style={[
+              styles.statusCard,
+              { borderColor: statusInfo?.color ?? '#333' },
+            ]}
           >
-            <View style={styles.statusCardRow}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: statusInfo?.color ?? '#666' },
-                ]}
-              />
-              <View style={styles.statusText}>
-                <Badge label={statusInfo?.label ?? 'Desconhecido'} variant={badgeVariant} size="md" />
-                {rodada != null && (
-                  <Text style={styles.statusRound}>Rodada {rodada}</Text>
-                )}
-              </View>
-            </View>
-          </Card>
-
-          <SectionHeader label="Resposta da API" />
-          <View style={styles.jsonCard}>
-            <Text style={styles.jsonText}>
-              {JSON.stringify(status, null, 2)}
-            </Text>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: statusInfo?.color ?? '#666' },
+              ]}
+            />
+            <Badge label={statusInfo?.label ?? 'Desconhecido'} variant={badgeVariant} size="md" />
+            {rodada != null && (
+              <Text style={styles.statusRound}>Rodada {rodada}</Text>
+            )}
           </View>
 
-          <SectionHeader label="Legenda" />
-          {Object.entries(STATUS_MAP).map(([code, info]) => (
-            <View key={code} style={styles.legendRow}>
-              <View
-                style={[styles.legendDot, { backgroundColor: info.color }]}
-              />
-              <Text style={styles.legendCode}>{code}</Text>
-              <Text style={styles.legendLabel}>{info.label}</Text>
-            </View>
-          ))}
-        </ScrollView>
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={() => navigation.navigate('StatusDetail', { status })}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.detailButtonText}>Ver detalhes</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.footer}>
@@ -205,63 +185,45 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     overflow: 'hidden',
   },
-  content: {
+  statusContainer: {
     flex: 1,
-  },
-  contentInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.xl,
-    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing['2xl'],
   },
-  statusCardRow: {
+  statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.xl,
+    paddingHorizontal: theme.spacing['2xl'],
+    gap: 14,
+    backgroundColor: theme.colors.surface,
   },
   statusDot: {
     width: theme.spacing.lg,
     height: theme.spacing.lg,
     borderRadius: theme.borderRadius.md,
-    marginRight: 14,
-  },
-  statusText: {
-    flex: 1,
   },
   statusRound: {
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginLeft: 'auto',
   },
-  jsonCard: {
-    backgroundColor: theme.colors.bg,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing['2xl'],
-  },
-  jsonText: {
-    fontFamily: 'monospace',
-    fontSize: theme.fontSize.sm,
-    color: '#e2e8f0',
-    lineHeight: 18,
-  },
-  legendRow: {
-    flexDirection: 'row',
+  detailButton: {
+    paddingVertical: 14,
+    paddingHorizontal: theme.spacing['2xl'],
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.borderRadius.lg,
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
   },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: theme.borderRadius.sm,
-    marginRight: 10,
-  },
-  legendCode: {
-    fontSize: theme.fontSize.base,
+  detailButtonText: {
+    fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textSecondary,
-    width: 20,
-  },
-  legendLabel: {
-    fontSize: theme.fontSize.base,
-    color: '#cbd5e1',
   },
   footer: {
     padding: theme.spacing.lg,
