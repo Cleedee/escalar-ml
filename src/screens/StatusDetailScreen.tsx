@@ -68,18 +68,8 @@ export default function StatusDetailScreen({ route, navigation }: any) {
         )}
         {modelo && !loadingModelo && (
           <View style={styles.modeloCard}>
-            <Text style={styles.modeloLabel}>Modelo</Text>
-            <Text style={styles.modeloValue}>{modelo.modelo}</Text>
-            <Text style={styles.modeloLabel}>Versão</Text>
-            <Text style={styles.modeloValue}>{modelo.versao}</Text>
-            <Text style={styles.modeloLabel}>Último treino</Text>
-            <Text style={styles.modeloValue}>{modelo.ultimo_treino}</Text>
-            {modelo.descricao && (
-              <>
-                <Text style={styles.modeloLabel}>Descrição</Text>
-                <Text style={styles.modeloValue}>{modelo.descricao}</Text>
-              </>
-            )}
+            <Text style={styles.modeloLabel}>Último treino do modelo</Text>
+            <Text style={styles.modeloValue}>{modelo.treinado_em}</Text>
           </View>
         )}
 

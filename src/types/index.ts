@@ -430,10 +430,7 @@ export interface ResultadoResponse {
 }
 
 export interface ModeloInfo {
-  modelo: string;
-  versao: string;
-  ultimo_treino: string;
-  descricao?: string;
+  treinado_em: string;
 }
 
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
