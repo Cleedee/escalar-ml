@@ -1,11 +1,33 @@
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MarketStatus, STATUS_MAP } from '../types';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MarketStatus, ModeloInfo, STATUS_MAP } from '../types';
 import { theme } from '../theme';
+import { fetchModeloInfo } from '../services/api';
 import SectionHeader from '../components/SectionHeader';
 
 export default function StatusDetailScreen({ route, navigation }: any) {
   const status: MarketStatus = route.params?.status;
+  const [modelo, setModelo] = useState<ModeloInfo | null>(null);
+  const [loadingModelo, setLoadingModelo] = useState(true);
+  const [modeloError, setModeloError] = useState<string | null>(null);
+
+  const loadModelo = useCallback(async () => {
+    setLoadingModelo(true);
+    setModeloError(null);
+    try {
+      const data = await fetchModeloInfo();
+      setModelo(data);
+    } catch (e: any) {
+      setModeloError(e.message || 'Erro ao buscar info do modelo');
+    } finally {
+      setLoadingModelo(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadModelo();
+  }, [loadModelo]);
 
   if (!status) {
     return (
@@ -28,6 +50,38 @@ export default function StatusDetailScreen({ route, navigation }: any) {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Voltar</Text>
         </TouchableOpacity>
+
+        <SectionHeader label="Modelo" />
+        {loadingModelo && (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>Carregando info do modelo...</Text>
+          </View>
+        )}
+        {modeloError && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorBoxText}>{modeloError}</Text>
+            <TouchableOpacity onPress={loadModelo}>
+              <Text style={styles.retryText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {modelo && !loadingModelo && (
+          <View style={styles.modeloCard}>
+            <Text style={styles.modeloLabel}>Modelo</Text>
+            <Text style={styles.modeloValue}>{modelo.modelo}</Text>
+            <Text style={styles.modeloLabel}>Versão</Text>
+            <Text style={styles.modeloValue}>{modelo.versao}</Text>
+            <Text style={styles.modeloLabel}>Último treino</Text>
+            <Text style={styles.modeloValue}>{modelo.ultimo_treino}</Text>
+            {modelo.descricao && (
+              <>
+                <Text style={styles.modeloLabel}>Descrição</Text>
+                <Text style={styles.modeloValue}>{modelo.descricao}</Text>
+              </>
+            )}
+          </View>
+        )}
 
         <SectionHeader label="Resposta da API" />
         <View style={styles.jsonCard}>
@@ -81,6 +135,52 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.md,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing['2xl'],
+  },
+  loadingText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fontSize.sm,
+  },
+  errorBox: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing['2xl'],
+  },
+  errorBoxText: {
+    color: theme.colors.danger,
+    fontSize: theme.fontSize.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  retryText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSize.sm,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  modeloCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing['2xl'],
+  },
+  modeloLabel: {
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    fontWeight: theme.fontWeight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: theme.spacing.sm,
+  },
+  modeloValue: {
+    fontSize: theme.fontSize.base,
+    color: theme.colors.text,
+    marginTop: 2,
+    marginBottom: theme.spacing.sm,
   },
   jsonCard: {
     backgroundColor: theme.colors.bg,

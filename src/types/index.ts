@@ -429,6 +429,13 @@ export interface ResultadoResponse {
   };
 }
 
+export interface ModeloInfo {
+  modelo: string;
+  versao: string;
+  ultimo_treino: string;
+  descricao?: string;
+}
+
 export const STATUS_MAP: Record<number, { label: string; color: string }> = {
   1: { label: 'Mercado Aberto', color: '#22c55e' },
   2: { label: 'Mercado Fechado (rodada rolando)', color: '#f97316' },

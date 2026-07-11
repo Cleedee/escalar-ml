@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, ModeloInfo, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 const RETRYABLE_CODES = new Set([502, 503, 504]);
 
@@ -115,6 +115,12 @@ export async function postProjetar(params: ProjetarRequest): Promise<ProjetarRes
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchModeloInfo(): Promise<ModeloInfo> {
+  const res = await fetch(`${API_BASE}/modelo/info`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
