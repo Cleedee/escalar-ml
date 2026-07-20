@@ -100,12 +100,11 @@ export async function fetchPartidas(rodada: number): Promise<PartidasResponse> {
 }
 
 export async function postBotEscalar(params: BotEscalarRequest): Promise<BotEscalarResponse> {
-  const res = await fetch(`${API_BASE}/bot/escalar`, {
+  const res = await fetchWithRetry(`${API_BASE}/bot/escalar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
