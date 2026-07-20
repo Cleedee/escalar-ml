@@ -21,7 +21,7 @@ const posicoes: Record<string, string> = {
 };
 
 export default function LineupDetailScreen({ route, navigation }: any) {
-  const { lineup } = route.params;
+  const { lineup, league } = route.params;
   const { response } = lineup;
   const [pontuadosAtletas, setPontuadosAtletas] = useState<Record<string, PontuadoAthlete> | null>(null);
   const [partidasData, setPartidasData] = useState<PartidasResponse | null>(null);
@@ -61,7 +61,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       const updatedLineup = { ...lineup, response: updatedResponse };
 
       await saveLineup(updatedLineup);
-      navigation.replace('LineupDetail', { lineup: updatedLineup });
+      navigation.replace('LineupDetail', { lineup: updatedLineup, league });
     } catch {
       Alert.alert('Erro', 'Não foi possível atualizar as projeções.');
     } finally {
@@ -72,7 +72,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const handleDelete = async () => {
     setShowDeleteModal(false);
     await deleteLineup(lineup.id);
-    navigation.goBack();
+    handleVoltar();
   };
 
   const handleExportJson = async () => {
@@ -87,6 +87,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       Alert.alert('Exportado', 'JSON copiado para a área de transferência');
     } catch {
       Alert.alert('Erro', 'Não foi possível exportar o JSON');
+    }
+  };
+
+  const handleVoltar = () => {
+    if (league) {
+      navigation.navigate('Ligas', { screen: 'LeagueDetail', params: { league } });
+    } else {
+      navigation.goBack();
     }
   };
 
@@ -259,7 +267,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       }
 
       Alert.alert('Salvo', 'Substituições aplicadas e salvas com sucesso!');
-      navigation.replace('LineupDetail', { lineup: updatedLineup });
+      navigation.replace('LineupDetail', { lineup: updatedLineup, league });
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar as substituições.');
     } finally {
@@ -634,7 +642,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
 
       <View style={styles.bottomButtons}>
-        <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
+        <Button variant="outline" label="Voltar" onPress={handleVoltar} />
         <Button variant="danger" label="Excluir escalação" onPress={() => setShowDeleteModal(true)} />
       </View>
 
