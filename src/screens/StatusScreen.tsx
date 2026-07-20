@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { MarketStatus, STATUS_MAP } from '../types';
-import { API_BASE } from '../config';
+import { API_BASE, BUILD_DATE } from '../config';
 import { fetchStatus } from '../services/api';
 import { version as APP_VERSION } from '../../package.json';
 import { theme } from '../theme';
@@ -115,7 +115,7 @@ export default function StatusScreen({ navigation }: any) {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>{API_BASE}</Text>
-        <Text style={styles.footerSub}>Última atualização: agora</Text>
+        <Text style={styles.footerSub}>Versão {APP_VERSION} · {BUILD_DATE}</Text>
       </View>
     </View>
   );
