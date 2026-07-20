@@ -3,8 +3,10 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 export default function HelpScreen({ navigation }: any) {
+  usePageTitle('Ajuda');
   return (
     <View style={styles.container}>
       <View style={styles.header}>

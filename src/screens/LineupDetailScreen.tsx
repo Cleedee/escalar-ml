@@ -10,6 +10,7 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 const posicoes: Record<string, string> = {
   GOL: 'Goleiro',
@@ -21,6 +22,7 @@ const posicoes: Record<string, string> = {
 };
 
 export default function LineupDetailScreen({ route, navigation }: any) {
+  usePageTitle('Escalação');
   const { lineup, league } = route.params;
   const { response } = lineup;
   const [pontuadosAtletas, setPontuadosAtletas] = useState<Record<string, PontuadoAthlete> | null>(null);

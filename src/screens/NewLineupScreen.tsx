@@ -17,6 +17,7 @@ import { saveLineup } from '../services/storage';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
+import usePageTitle from '../usePageTitle';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 

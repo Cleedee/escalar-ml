@@ -8,12 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Atleta } from '../types';
+import { CartolaAthlete } from '../types';
 import { fetchAtletas } from '../services/api';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 type SortKey = 'preco_desc' | 'preco_asc' | 'media_desc' | 'media_asc';
 
@@ -55,6 +56,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ];
 
 export default function AtletasScreen() {
+  usePageTitle('Atletas');
   const [query, setQuery] = useState('');
   const [posicao, setPosicao] = useState('');
   const [status, setStatus] = useState('');

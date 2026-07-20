@@ -16,10 +16,12 @@ import Button from '../components/Button';
 import { League } from '../types';
 import { deleteLeague, getLeagues, saveLeague } from '../services/storage';
 import { fetchStatus } from '../services/api';
+import usePageTitle from '../usePageTitle';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 
 export default function LeaguesScreen({ navigation }: any) {
+  usePageTitle('Ligas');
   const [leagues, setLeagues] = useState<League[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showCopy, setShowCopy] = useState(false);

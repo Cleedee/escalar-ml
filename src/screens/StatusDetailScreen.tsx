@@ -5,8 +5,10 @@ import { MarketStatus, ModeloInfo, STATUS_MAP } from '../types';
 import { theme } from '../theme';
 import { fetchModeloInfo } from '../services/api';
 import SectionHeader from '../components/SectionHeader';
+import usePageTitle from '../usePageTitle';
 
 export default function StatusDetailScreen({ route, navigation }: any) {
+  usePageTitle('Status');
   const status: MarketStatus = route.params?.status;
   const [modelo, setModelo] = useState<ModeloInfo | null>(null);
   const [loadingModelo, setLoadingModelo] = useState(true);

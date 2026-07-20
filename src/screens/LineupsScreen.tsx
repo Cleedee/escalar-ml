@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { League, Lineup } from '../types';
 import { API_BASE } from '../config';
 import { fetchStatus } from '../services/api';
 import { getLeagues, getLineupsByRodada } from '../services/storage';
@@ -16,8 +15,10 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 export default function LineupsScreen({ navigation }: any) {
+  usePageTitle('Escalações');
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const [rodada, setRodada] = useState<number>(17);
   const [rodadaAtual, setRodadaAtual] = useState<number>(17);

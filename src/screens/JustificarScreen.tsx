@@ -13,6 +13,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 const SCOUT_LABELS: Record<string, string> = {
   A: 'Assistência',
@@ -37,6 +38,7 @@ const SCOUT_LABELS: Record<string, string> = {
 };
 
 export default function JustificarScreen({ route, navigation }: any) {
+  usePageTitle('Justificar Atleta');
   const { apelido, atleta_id, clube } = route.params;
   const [data, setData] = useState<JustificarResponse | null>(null);
   const [loading, setLoading] = useState(true);

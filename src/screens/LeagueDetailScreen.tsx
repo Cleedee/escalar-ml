@@ -19,6 +19,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 
@@ -119,6 +120,7 @@ function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { n
 }
 
 export default function LeagueDetailScreen({ route, navigation }: any) {
+  usePageTitle(route.params?.league?.nome ?? 'Liga');
   const { league: initialLeague } = route.params;
   const [league, setLeague] = useState<League>(initialLeague);
   const [showTeamForm, setShowTeamForm] = useState(false);

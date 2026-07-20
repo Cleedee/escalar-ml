@@ -14,6 +14,7 @@ import { fetchStatus } from '../services/api';
 import { version as APP_VERSION } from '../../package.json';
 import { theme } from '../theme';
 import Badge from '../components/Badge';
+import usePageTitle from '../usePageTitle';
 
 const BADGE_VARIANT: Record<number, 'primary' | 'warning' | 'info' | 'danger' | 'neutral'> = {
   1: 'primary',
@@ -24,6 +25,7 @@ const BADGE_VARIANT: Record<number, 'primary' | 'warning' | 'info' | 'danger' | 
 };
 
 export default function StatusScreen({ navigation }: any) {
+  usePageTitle('Status do Mercado');
   const [status, setStatus] = useState<MarketStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
