@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
 import { deleteLineup, getLeagues, saveLeague, saveLineup } from '../services/storage';
 import { fetchPontuados, fetchPartidas, postProjetar } from '../services/api';
@@ -10,6 +12,7 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import { version as APP_VERSION } from '../../package.json';
 import usePageTitle from '../usePageTitle';
 
 const posicoes: Record<string, string> = {
@@ -89,6 +92,67 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       Alert.alert('Exportado', 'JSON copiado para a área de transferência');
     } catch {
       Alert.alert('Erro', 'Não foi possível exportar o JSON');
+    }
+  };
+
+  const handleExportTxt = async () => {
+    const capitao = response.players.find((p: Player) => p.role === 'capitao');
+    const posOrder = ['GOL', 'LAT', 'ZAG', 'MEI', 'ATA'];
+    const posLabel: Record<string, string> = { GOL: 'Goleiro', LAT: 'Laterais', ZAG: 'Zagueiros', MEI: 'Meias', ATA: 'Atacantes' };
+
+    let text = `═ ESCALAÇÃO: ${lineup.nome} ═\n\n`;
+    text += `Rodada ${lineup.rodada}  |  ${response.formacao}  |  C$ ${response.orcamento_usado?.toFixed(2)}\n`;
+    text += `${response.pontos_previstos?.toFixed(1)} pts previstos`;
+    if (response.valorizacao_total) text += `  |  +${response.valorizacao_total.toFixed(2)}% valorização`;
+    text += `\n\n`;
+
+    for (const pos of posOrder) {
+      const players = response.players.filter((p: Player) => p.posicao === pos);
+      if (players.length === 0) continue;
+      text += `▸ ${posLabel[pos]}\n`;
+      for (const p of players) {
+        const isCap = p.atleta_id === capitao?.atleta_id;
+        text += `  ${p.apelido} (${p.clube}) — C$ ${p.preco?.toFixed(2)} — ${p.previsto?.toFixed(1)} pts${isCap ? ' 👑' : ''}\n`;
+      }
+      text += '\n';
+    }
+
+    if (response.tecnico) {
+      const t = response.tecnico;
+      text += `▸ Técnico\n  ${t.apelido} (${t.clube}) — C$ ${t.preco?.toFixed(2)} — ${t.previsto?.toFixed(1)} pts\n\n`;
+    }
+
+    if (response.reservas && Object.keys(response.reservas).length > 0) {
+      text += `▸ Reservas\n`;
+      for (const [pos, r] of Object.entries(response.reservas)) {
+        const rv = r as Reserva;
+        text += `  ${posLabel[pos] || pos}: ${rv.apelido} (${rv.clube}) — C$ ${rv.preco?.toFixed(2)} — ${rv.previsto?.toFixed(1)} pts${rv.luxo ? ' 💎' : ''}\n`;
+      }
+      text += '\n';
+    }
+
+    if (response.comparacao?.length > 1) {
+      text += `▸ Comparação de formações\n`;
+      for (const c of response.comparacao) {
+        text += `  ${c.formacao}: ${c.pontos_previstos?.toFixed(1)} pts | C$ ${c.orcamento_usado?.toFixed(2)}\n`;
+      }
+      text += '\n';
+    }
+
+    text += `─\nGerado por EscalarML v${APP_VERSION}\n`;
+
+    try {
+      if (Platform.OS === 'web') {
+        await Clipboard.setStringAsync(text);
+        Alert.alert('Copiado', 'Texto copiado! Cole no WhatsApp.');
+      } else {
+        const uri = FileSystem.cacheDirectory + `escalacao_${lineup.rodada}_${Date.now()}.txt`;
+        await FileSystem.writeAsStringAsync(uri, text, { encoding: FileSystem.EncodingType.UTF8 });
+        await Sharing.shareAsync(uri, { mimeType: 'text/plain', dialogTitle: 'Compartilhar escalação' });
+      }
+    } catch {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('Texto copiado', 'Não foi possível compartilhar o arquivo. O texto foi copiado para a área de transferência.');
     }
   };
 
@@ -642,6 +706,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       />
 
       <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />
+      <Button variant="outline" label="Compartilhar" onPress={handleExportTxt} />
 
       <View style={styles.bottomButtons}>
         <Button variant="outline" label="Voltar" onPress={handleVoltar} />
