@@ -478,11 +478,14 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       };
       const result = await postBotEscalar(params);
 
+      const resolvedPerfil = editEstrategia === 'auto' ? result.perfil : editPerfil;
+      const resolvedFoco = editEstrategia === 'auto' ? result.foco : editFoco;
+
       const lineups = await getLineups();
       const existingIdx = lineups.findIndex(
         (l) => l.atribuido_a_team_id === bot.id && l.rodada === rodadaAtual
       );
-      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot, editPerfil, editFoco);
+      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot, resolvedPerfil, resolvedFoco);
       const lineup: Lineup = {
         id: existingIdx >= 0 ? lineups[existingIdx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome: `${bot.nome} - R${rodadaAtual}`,
@@ -635,7 +638,9 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 : 'auto',
             };
             const result = await postBotEscalar(params);
-            const { params: otimizarParams, response } = mapBotResponseToLineup(result, team, team.perfil || 'neutro', team.foco ?? 1.0);
+            const resolvedPerfil = team.estrategia === 'auto' ? result.perfil : (team.perfil || 'neutro');
+            const resolvedFoco = team.estrategia === 'auto' ? result.foco : (team.foco ?? 1.0);
+            const { params: otimizarParams, response } = mapBotResponseToLineup(result, team, resolvedPerfil, resolvedFoco);
             const lineup: Lineup = {
               id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
               nome: `${team.nome} - R${rodada}`,
