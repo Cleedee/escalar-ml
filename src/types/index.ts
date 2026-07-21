@@ -122,6 +122,8 @@ export interface Team {
   estrategia?: 'auto' | 'manual';
   foco?: number;
   perfil?: 'neutro' | 'agressivo' | 'conservador';
+  obrigar?: number[];
+  excluir?: number[];
 }
 
 export interface BotEscalarRequest {
@@ -137,6 +139,8 @@ export interface BotEscalarRequest {
   pontos_proximo: number;
   modalidade: 'patrimonio' | 'pontuacao';
   estrategia: 'auto' | { perfil: 'neutro' | 'agressivo' | 'conservador'; foco: number };
+  obrigar?: number[];
+  excluir?: number[];
 }
 
 export interface BotPlayer {

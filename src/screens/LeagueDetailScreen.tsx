@@ -156,6 +156,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
   const [editFoco, setEditFoco] = useState(1.0);
   const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
+  const [editObrigarText, setEditObrigarText] = useState('');
+  const [editExcluirText, setEditExcluirText] = useState('');
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const firstFocus = useRef(true);
 
@@ -369,15 +371,21 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     setEditEstrategia(bot.estrategia || 'auto');
     setEditFoco(bot.foco ?? 1.0);
     setEditPerfil(bot.perfil || 'neutro');
+    setEditObrigarText((bot.obrigar ?? []).join(', '));
+    setEditExcluirText((bot.excluir ?? []).join(', '));
   };
 
   const salvarEstrategiaBot = () => {
     if (!gerenciandoBot) return;
+    const parseIds = (text: string) =>
+      text.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
     const updated: Team = {
       ...gerenciandoBot,
       estrategia: editEstrategia,
       foco: editFoco,
       perfil: editPerfil,
+      obrigar: parseIds(editObrigarText),
+      excluir: parseIds(editExcluirText),
     };
     setLeague({
       ...league,
@@ -460,6 +468,10 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
     try {
       const lider = sorted[0];
       const proximo = sorted.find((t) => t.total_acumulado > bot.total_acumulado && t.id !== bot.id);
+      const parseIds = (text: string) =>
+        text.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      const obrigar = parseIds(editObrigarText);
+      const excluir = parseIds(editExcluirText);
       const params: BotEscalarRequest = {
         nome: bot.nome,
         orcamento_atual: bot.patrimonio,
@@ -475,6 +487,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         estrategia: editEstrategia === 'manual'
           ? { perfil: editPerfil, foco: editFoco }
           : 'auto',
+        ...(obrigar.length > 0 && { obrigar }),
+        ...(excluir.length > 0 && { excluir }),
       };
       const result = await postBotEscalar(params);
 
@@ -621,6 +635,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             const proximo = league.times.find(
               (t) => t.total_acumulado > team.total_acumulado && t.id !== team.id,
             );
+            const obrigar = team.obrigar ?? [];
+            const excluir = team.excluir ?? [];
             const params: BotEscalarRequest = {
               nome: team.nome,
               orcamento_atual: team.patrimonio,
@@ -636,6 +652,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               estrategia: team.estrategia === 'manual'
                 ? { perfil: team.perfil || 'neutro', foco: team.foco ?? 1.0 }
                 : 'auto',
+              ...(obrigar.length > 0 && { obrigar }),
+              ...(excluir.length > 0 && { excluir }),
             };
             const result = await postBotEscalar(params);
             const resolvedPerfil = team.estrategia === 'auto' ? result.perfil : (team.perfil || 'neutro');
@@ -1144,6 +1162,28 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 </>
               )}
 
+              <Text style={styles.label}>Obrigar (IDs)</Text>
+              <View style={styles.flexRow}>
+                <TextInput
+                  style={[styles.input, styles.flex1]}
+                  placeholder="Ex: 117632, 97899"
+                  placeholderTextColor="#64748b"
+                  value={editObrigarText}
+                  onChangeText={setEditObrigarText}
+                />
+              </View>
+
+              <Text style={styles.label}>Excluir (IDs)</Text>
+              <View style={styles.flexRow}>
+                <TextInput
+                  style={[styles.input, styles.flex1]}
+                  placeholder="Ex: 123456, 789012"
+                  placeholderTextColor="#64748b"
+                  value={editExcluirText}
+                  onChangeText={setEditExcluirText}
+                />
+              </View>
+
               {botLoading && (
                 <ActivityIndicator size="large" color="#22c55e" style={{ marginVertical: 24 }} />
               )}
@@ -1306,6 +1346,13 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.lg,
+  },
+  flexRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  flex1: {
+    flex: 1,
   },
   label: {
     fontSize: theme.fontSize.sm,
