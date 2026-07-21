@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.1] — 2026-07-20
+
+### Adicionado
+- Botão Compartilhar na escalação: gera arquivo .txt para WhatsApp
+- Campos obrigar/excluir na gestão de bots (modal e consolidar)
+
+### Alterado
+- `postBotEscalar` usa `fetchWithRetry` para tratar 502/503/504
+
+### Corrigido
+- Perfil/foco de bots com estratégia auto: agora respeita valores do backend
+
 ## [1.1.0] — 2026-07-20
 
 ### Adicionado
