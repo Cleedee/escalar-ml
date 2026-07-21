@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
-import { fetchClubes, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
+import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
+import { fetchClubes, fetchMercado, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 import { theme } from '../theme';
 import Card from '../components/Card';
@@ -22,6 +22,7 @@ import Badge from '../components/Badge';
 import usePageTitle from '../usePageTitle';
 
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
+const POS_MAP: Record<number, string> = { 1: 'GOL', 2: 'LAT', 3: 'ZAG', 4: 'MEI', 5: 'ATA', 6: 'TEC' };
 
 const POS_ABBR: Record<number, string> = {
   1: 'GOL',
@@ -158,6 +159,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
   const [editObrigarText, setEditObrigarText] = useState('');
   const [editExcluirText, setEditExcluirText] = useState('');
+  const [mercadoAtletas, setMercadoAtletas] = useState<CartolaAthlete[]>([]);
+  const [clubeMap, setClubeMap] = useState<Record<string, string>>({});
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<'obrigar' | 'excluir'>('obrigar');
+  const [searchQuery, setSearchQuery] = useState('');
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const firstFocus = useRef(true);
 
@@ -397,6 +403,49 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const closeGerenciarBot = () => {
     setGerenciandoBot(null);
   };
+
+  const filteredAtletas = searchQuery.trim()
+    ? mercadoAtletas.filter((a) =>
+        a.apelido.toLowerCase().includes(searchQuery.toLowerCase())
+      ).slice(0, 30)
+    : mercadoAtletas.slice(0, 30);
+
+  const openSearch = (target: 'obrigar' | 'excluir') => {
+    setSearchTarget(target);
+    setSearchQuery('');
+    setShowSearch(true);
+  };
+
+  const selectAthlete = (athlete: CartolaAthlete) => {
+    const idStr = String(athlete.atleta_id);
+    if (searchTarget === 'obrigar') {
+      setEditObrigarText((prev) => {
+        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+        if (ids.includes(idStr)) return prev;
+        return prev ? `${prev}, ${idStr}` : idStr;
+      });
+    } else {
+      setEditExcluirText((prev) => {
+        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+        if (ids.includes(idStr)) return prev;
+        return prev ? `${prev}, ${idStr}` : idStr;
+      });
+    }
+    setShowSearch(false);
+  };
+
+  useEffect(() => {
+    Promise.all([fetchMercado(), fetchClubes()])
+      .then(([mercado, clubes]) => {
+        setMercadoAtletas(Object.values(mercado.atletas));
+        const map: Record<string, string> = {};
+        for (const [id, c] of Object.entries(clubes)) {
+          map[id] = c.nome;
+        }
+        setClubeMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team, perfil: string, foco: number): { params: OtimizarParams; response: Lineup['response'] } {
     const mapPlayer = (p: BotEscalarResponse['players'][0]): Player => ({
@@ -1162,26 +1211,32 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 </>
               )}
 
-              <Text style={styles.label}>Obrigar (IDs)</Text>
+              <Text style={styles.label}>Obrigar</Text>
               <View style={styles.flexRow}>
                 <TextInput
                   style={[styles.input, styles.flex1]}
-                  placeholder="Ex: 117632, 97899"
-                  placeholderTextColor="#64748b"
+                  placeholder="IDs separados por vírgula"
+                  placeholderTextColor={theme.colors.textMuted}
                   value={editObrigarText}
                   onChangeText={setEditObrigarText}
                 />
+                <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
+                  <Text style={styles.searchBtnText}>🔍</Text>
+                </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>Excluir (IDs)</Text>
+              <Text style={styles.label}>Excluir</Text>
               <View style={styles.flexRow}>
                 <TextInput
                   style={[styles.input, styles.flex1]}
-                  placeholder="Ex: 123456, 789012"
-                  placeholderTextColor="#64748b"
+                  placeholder="IDs separados por vírgula"
+                  placeholderTextColor={theme.colors.textMuted}
                   value={editExcluirText}
                   onChangeText={setEditExcluirText}
                 />
+                <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
+                  <Text style={styles.searchBtnText}>🔍</Text>
+                </TouchableOpacity>
               </View>
 
               {botLoading && (
@@ -1209,6 +1264,50 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={showSearch} transparent animationType="slide">
+        <View style={styles.searchModalOverlay}>
+          <View style={styles.searchModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {searchTarget === 'obrigar' ? 'Obrigar' : 'Excluir'} — selecione o atleta
+              </Text>
+              <TouchableOpacity onPress={() => setShowSearch(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.modalSearch}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar por apelido..."
+              placeholderTextColor={theme.colors.textMuted}
+              autoFocus
+            />
+            <ScrollView style={styles.modalList}>
+              {filteredAtletas.length === 0 ? (
+                <Text style={styles.modalEmpty}>Nenhum atleta encontrado</Text>
+              ) : (
+                filteredAtletas.map((a) => (
+                  <TouchableOpacity
+                    key={a.atleta_id}
+                    style={styles.modalItem}
+                    onPress={() => selectAthlete(a)}
+                  >
+                    <View style={styles.modalItemLeft}>
+                      <Text style={styles.modalItemName}>{a.apelido}</Text>
+                      <Text style={styles.modalItemDetail}>
+                        {POS_MAP[a.posicao_id] || '?'} · {clubeMap[String(a.clube_id)] || a.clube_id} · C$ {a.preco_num.toFixed(2)}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalItemId}>#{a.atleta_id}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1332,6 +1431,18 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.overlay,
     justifyContent: 'center',
     padding: theme.spacing['2xl'],
+  },
+  searchModalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  searchModalContent: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    maxHeight: '80%',
+    padding: theme.spacing.xl,
   },
   modalScroll: {
     maxHeight: '80%',
@@ -1674,5 +1785,75 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
+  },
+  searchBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnText: {
+    fontSize: theme.fontSize.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  modalClose: {
+    fontSize: theme.fontSize.xl,
+    color: theme.colors.textSecondary,
+    padding: theme.spacing.xs,
+  },
+  modalSearch: {
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
+    padding: 14,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    marginBottom: theme.spacing.md,
+  },
+  modalList: {
+    maxHeight: 400,
+  },
+  modalEmpty: {
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing['2xl'],
+    fontSize: theme.fontSize.base,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+  },
+  modalItemLeft: {
+    flex: 1,
+  },
+  modalItemName: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  modalItemDetail: {
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  modalItemId: {
+    fontSize: 11,
+    color: theme.colors.textMuted,
+    marginLeft: theme.spacing.sm,
   },
 });
