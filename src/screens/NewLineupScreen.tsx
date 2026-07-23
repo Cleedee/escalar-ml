@@ -300,7 +300,6 @@ export default function NewLineupScreen({ route, navigation }: any) {
               onChangeText={setObrigarText}
               placeholder="IDs separados por vírgula"
               placeholderTextColor={theme.colors.textMuted}
-              keyboardType="number-pad"
             />
             <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
               <Text style={styles.searchBtnText}>🔍</Text>
@@ -315,7 +314,6 @@ export default function NewLineupScreen({ route, navigation }: any) {
               onChangeText={setExcluirText}
               placeholder="IDs separados por vírgula"
               placeholderTextColor={theme.colors.textMuted}
-              keyboardType="number-pad"
             />
             <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
               <Text style={styles.searchBtnText}>🔍</Text>

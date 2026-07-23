@@ -496,6 +496,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         foco,
         incluir_duvidosos: false,
         reserva_luxo: true,
+        ...(bot.obrigar && bot.obrigar.length > 0 && { obrigar: bot.obrigar }),
+        ...(bot.excluir && bot.excluir.length > 0 && { excluir: bot.excluir }),
       },
       response: {
         formacao: botRes.formacao,
@@ -563,6 +565,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       setGerenciandoBot(null);
       navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup, league } });
     } catch (e: any) {
+      Alert.alert('Erro', e?.message || 'Falha ao escalar bot');
     } finally {
       setBotLoading(false);
     }
