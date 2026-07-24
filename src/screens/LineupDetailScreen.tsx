@@ -12,6 +12,7 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import SoccerField from '../components/SoccerField';
 import { version as APP_VERSION } from '../../package.json';
 import usePageTitle from '../usePageTitle';
 
@@ -34,6 +35,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [substituicaoResult, setSubstituicaoResult] = useState<SubstituicaoResult | null>(null);
   const [salvandoSubstituicao, setSalvandoSubstituicao] = useState(false);
   const [projetando, setProjetando] = useState(false);
+  const [showField, setShowField] = useState(false);
 
   const handleProjetar = async () => {
     setProjetando(true);
@@ -461,7 +463,30 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </Card>
       )}
 
-      <SectionHeader label="Titulares" />
+      <View style={styles.viewToggle}>
+        <TouchableOpacity
+          style={[styles.viewToggleBtn, !showField && styles.viewToggleActive]}
+          onPress={() => setShowField(false)}
+        >
+          <Text style={[styles.viewToggleText, !showField && styles.viewToggleTextActive]}>Lista</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewToggleBtn, showField && styles.viewToggleActive]}
+          onPress={() => setShowField(true)}
+        >
+          <Text style={[styles.viewToggleText, showField && styles.viewToggleTextActive]}>Campo</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showField ? (
+        <SoccerField
+          players={response.players}
+          formacao={response.formacao}
+          tecnico={response.tecnico}
+          reservas={response.reservas}
+        />
+      ) : (
+        <><SectionHeader label="Titulares" />
       {response.players.map((p: Player) => {
         const pts = getPontuacao(p.atleta_id);
         const foiSubstituido = substituidoIds.has(p.atleta_id);
@@ -628,6 +653,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           })}
         </>
       )}
+      </>)}  {/********** end of showField else / lista view **********/}
 
       {response.comparacao?.length > 0 && (
         <>
@@ -1027,6 +1053,34 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    gap: 0,
+    marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+  },
+  viewToggleBtn: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+  },
+  viewToggleActive: {
+    backgroundColor: theme.colors.primaryGlow,
+  },
+  viewToggleText: {
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textMuted,
+    fontWeight: theme.fontWeight.medium,
+  },
+  viewToggleTextActive: {
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   bottomButtons: {
     flexDirection: 'row',
