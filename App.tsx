@@ -1,8 +1,12 @@
+import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform, Text, StatusBar } from 'react-native';
 import { theme } from './src/theme';
+import { APP_VERSION } from './src/config';
+import { checkForUpdate, getLastPromptedVersion } from './src/services/versionCheck';
+import UpdateModal from './src/components/UpdateModal';
 import StatusScreen from './src/screens/StatusScreen';
 import StatusDetailScreen from './src/screens/StatusDetailScreen';
 import LineupsScreen from './src/screens/LineupsScreen';
@@ -56,9 +60,33 @@ if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker'
 }
 
 export default function App() {
+  const [updateInfo, setUpdateInfo] = useState<{ latest: string; current: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const lastPrompted = await getLastPromptedVersion();
+        const result = await checkForUpdate();
+        if (cancelled) return;
+        if (result.hasUpdate && result.latestVersion !== lastPrompted) {
+          setUpdateInfo({ latest: result.latestVersion, current: result.currentVersion });
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <NavigationContainer>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.bg} />
+
+      <UpdateModal
+        visible={updateInfo !== null}
+        currentVersion={updateInfo?.current ?? APP_VERSION}
+        latestVersion={updateInfo?.latest ?? ''}
+        onClose={() => setUpdateInfo(null)}
+      />
       <Tab.Navigator
         screenOptions={{
           headerShown: false,

@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, ModeloInfo, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, ModeloInfo, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, HealthResponse, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
 
 const RETRYABLE_CODES = new Set([502, 503, 504]);
 
@@ -13,6 +13,12 @@ async function fetchWithRetry(url: string, opts?: RequestInit, maxRetries = 3): 
     }
   }
   throw new Error(`HTTP after retries`);
+}
+
+export async function fetchHealth(): Promise<HealthResponse> {
+  const res = await fetch(`${API_BASE}/`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
 export async function fetchStatus(): Promise<MarketStatus> {

@@ -406,6 +406,11 @@ export interface ProjetarResponse {
   tecnico: Tecnico;
 }
 
+export interface HealthResponse {
+  status?: string;
+  version?: string;
+}
+
 export interface ResultadoResponse {
   total_pontos: number;
   valorizacao_total: number;
