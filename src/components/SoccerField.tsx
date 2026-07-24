@@ -142,9 +142,9 @@ export default function SoccerField({ players, formacao, tecnico, reservas }: Pr
                   />
                   <SvgText
                     x={x}
-                    y={y + 1.5}
+                    y={y + 1.2}
                     textAnchor="middle"
-                    fontSize="6"
+                    fontSize="5"
                     fontWeight="bold"
                     fill={theme.colors.text}
                   >
@@ -152,9 +152,9 @@ export default function SoccerField({ players, formacao, tecnico, reservas }: Pr
                   </SvgText>
                   <SvgText
                     x={x}
-                    y={y + 11}
+                    y={y + 10}
                     textAnchor="middle"
-                    fontSize="5.2"
+                    fontSize="4.2"
                     fill={theme.colors.text}
                     fontWeight="600"
                   >
@@ -162,9 +162,9 @@ export default function SoccerField({ players, formacao, tecnico, reservas }: Pr
                   </SvgText>
                   <SvgText
                     x={x}
-                    y={y + 15.5}
+                    y={y + 14}
                     textAnchor="middle"
-                    fontSize="4.5"
+                    fontSize="3.8"
                     fill={theme.colors.textSecondary}
                   >
                     C${p.preco.toFixed(1)}
