@@ -37,10 +37,10 @@ export default function UpdateModal({ visible, currentVersion, latestVersion, on
             últimas funcionalidades e correções.
           </Text>
           <View style={styles.buttons}>
-            <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate}>
+            <TouchableOpacity style={styles.updateBtn} onPress={handleUpdate} activeOpacity={0.8}>
               <Text style={styles.updateBtnText}>Atualizar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.dismissBtn} onPress={handleDismiss}>
+            <TouchableOpacity style={styles.dismissBtn} onPress={handleDismiss} activeOpacity={0.8}>
               <Text style={styles.dismissBtnText}>Agora não</Text>
             </TouchableOpacity>
           </View>
@@ -65,19 +65,22 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   icon: {
     fontSize: 40,
     marginBottom: theme.spacing.md,
   },
   title: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
@@ -85,6 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   body: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
@@ -97,24 +101,28 @@ const styles = StyleSheet.create({
   },
   updateBtn: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
   },
   updateBtnText: {
     color: '#fff',
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
+    letterSpacing: theme.letterSpacing.wide,
   },
   dismissBtn: {
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
+    backgroundColor: theme.colors.surface,
   },
   dismissBtnText: {
     color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
   },

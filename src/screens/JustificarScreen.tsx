@@ -13,6 +13,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
+import Button from '../components/Button';
 import usePageTitle from '../usePageTitle';
 
 const SCOUT_LABELS: Record<string, string> = {
@@ -70,9 +71,7 @@ export default function JustificarScreen({ route, navigation }: any) {
     return (
       <View style={[styles.container, styles.center]}>
         <Text style={styles.errorText}>{error || 'Atleta não encontrado'}</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Voltar</Text>
-        </TouchableOpacity>
+        <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
       </View>
     );
   }
@@ -81,7 +80,6 @@ export default function JustificarScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
-      {/* Player header */}
       <Card>
         <View style={styles.playerMain}>
           <View>
@@ -115,7 +113,6 @@ export default function JustificarScreen({ route, navigation }: any) {
         </View>
       </Card>
 
-      {/* Scout */}
       <SectionHeader label="Scout (média por jogo)" />
       <View style={styles.scoutGrid}>
         {Object.entries(scout).map(([key, item]) => (
@@ -130,7 +127,6 @@ export default function JustificarScreen({ route, navigation }: any) {
         ))}
       </View>
 
-      {/* Recent performance */}
       <SectionHeader label="Desempenho Recente" />
       <Card>
         <View style={styles.recenteBars}>
@@ -156,7 +152,6 @@ export default function JustificarScreen({ route, navigation }: any) {
         </Text>
       </Card>
 
-      {/* Next match */}
       <SectionHeader label="Próxima Partida" />
       <Card>
         <Text style={styles.partidaText}>
@@ -165,7 +160,6 @@ export default function JustificarScreen({ route, navigation }: any) {
         </Text>
       </Card>
 
-      {/* Methodology */}
       <SectionHeader label="Metodologia" />
       <Card>
         <Badge label={metodologia.tipo === 'ml' ? 'ML' : metodologia.tipo} variant="info" />
@@ -173,7 +167,6 @@ export default function JustificarScreen({ route, navigation }: any) {
         <Text style={styles.metFormula}>{metodologia.formula}</Text>
       </Card>
 
-      {/* Risk profiles */}
       <SectionHeader label="Análise por Perfil" />
       {analise_perfis.map((p) => (
         <Card key={p.perfil}>
@@ -190,9 +183,7 @@ export default function JustificarScreen({ route, navigation }: any) {
         </Card>
       ))}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.backBtnText}>Voltar</Text>
-      </TouchableOpacity>
+      <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
     </ScrollView>
   );
 }
@@ -212,22 +203,11 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing['3xl'] + theme.spacing.sm,
   },
   errorText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.danger,
     fontSize: theme.fontSize.md,
     textAlign: 'center',
-  },
-  backBtn: {
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  backBtnText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fontSize.md,
-    fontWeight: theme.fontWeight.semibold,
+    marginBottom: theme.spacing.lg,
   },
   playerMain: {
     flexDirection: 'row',
@@ -236,11 +216,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   playerName: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize['2xl'],
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
   },
   playerSub: {
+    fontFamily: theme.fonts.body,
     fontSize: 13,
     color: theme.colors.textSecondary,
     marginTop: 2,
@@ -253,14 +235,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.primary,
   },
   statLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: theme.letterSpacing.wide,
   },
   scoutGrid: {
     flexDirection: 'row',
@@ -272,23 +258,29 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceElevated,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   scoutKey: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
   },
   scoutLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: 11,
     color: theme.colors.textMuted,
     marginBottom: 6,
   },
   scoutValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
   },
   scoutMedia: {
+    fontFamily: theme.fonts.body,
     fontSize: 11,
     color: theme.colors.textMuted,
     marginTop: 1,
@@ -305,6 +297,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   barValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
@@ -316,16 +309,19 @@ const styles = StyleSheet.create({
     minHeight: 4,
   },
   barLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.xs,
   },
   recenteMedia: {
+    fontFamily: theme.fonts.body,
     fontSize: 13,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   partidaText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.textSecondary,
   },
@@ -334,16 +330,18 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   metDesc: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
-    marginBottom: 6,
+    marginVertical: theme.spacing.md,
   },
   metFormula: {
+    fontFamily: theme.fonts.mono,
     fontSize: 13,
     color: theme.colors.textMuted,
-    fontFamily: 'monospace',
   },
   perfilName: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
   },

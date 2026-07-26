@@ -106,7 +106,7 @@ export default function StatusScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => navigation.navigate('StatusDetail', { status })}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
             <Text style={styles.detailButtonText}>Ver detalhes</Text>
           </TouchableOpacity>
@@ -136,13 +136,15 @@ const styles = StyleSheet.create({
     height: 80,
   },
   subtitle: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
   versionText: {
+    fontFamily: theme.fonts.body,
     fontSize: 11,
-    color: '#475569',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
   center: {
@@ -152,6 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['2xl'],
   },
   loadingText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontSize: theme.fontSize.md,
@@ -171,11 +174,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   errorText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.danger,
     fontSize: theme.fontSize.lg,
     textAlign: 'center',
   },
   retry: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.primary,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
@@ -210,6 +215,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
   },
   statusRound: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     marginLeft: 'auto',
@@ -219,26 +225,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['2xl'],
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
+    backgroundColor: theme.colors.surface,
   },
   detailButtonText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textSecondary,
+    letterSpacing: theme.letterSpacing.wide,
   },
   footer: {
     padding: theme.spacing.lg,
     alignItems: 'center',
   },
   footerText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
   },
   footerSub: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
-    color: '#475569',
+    color: theme.colors.textMuted,
     marginTop: 2,
   },
 });

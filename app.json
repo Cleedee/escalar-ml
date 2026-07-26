@@ -2,7 +2,7 @@
   "expo": {
     "name": "EscalarML",
     "slug": "escalar-ml",
-    "version": "1.0.1",
+    "version": "1.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",

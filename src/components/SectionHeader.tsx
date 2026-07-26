@@ -25,17 +25,18 @@ const styles = StyleSheet.create({
   },
   line: {
     width: 3,
-    height: 16,
+    height: 18,
     backgroundColor: theme.colors.primary,
     borderRadius: 2,
     marginRight: theme.spacing.sm,
   },
   label: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: theme.letterSpacing.wider,
     flex: 1,
   },
   action: {

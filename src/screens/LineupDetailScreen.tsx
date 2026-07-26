@@ -257,7 +257,6 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
       await saveLineup(updatedLineup);
 
-      // Enrich with /projetar
       try {
         const capitaoId = novosPlayers.find((p: Player) => p.role === 'capitao')?.atleta_id;
         const projetada = await postProjetar({
@@ -281,11 +280,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         updatedResponse.valorizacao_total = projetada.valorizacao_total;
         updatedLineup.response = updatedResponse;
         await saveLineup(updatedLineup);
-      } catch {
-        // enrichment non-fatal — substitution data already saved
-      }
+      } catch {}
 
-      // Update team in league if linked
       if (lineup.atribuido_a_team_id) {
         const todosTitulares = [
           ...novosPlayers,
@@ -784,11 +780,12 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   paramsTitle: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: theme.letterSpacing.wider,
     marginBottom: theme.spacing.md,
   },
   paramsRow: {
@@ -797,35 +794,43 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   paramsLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
   },
   paramsValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.text,
     fontWeight: theme.fontWeight.semibold,
   },
   resultTitle: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize['2xl'],
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+    letterSpacing: theme.letterSpacing.tight,
   },
   resultRodada: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
   resultFormacao: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
   },
   resultEsquema: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
     marginBottom: theme.spacing.xs,
   },
   resultOrcamento: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
@@ -843,6 +848,7 @@ const styles = StyleSheet.create({
   },
   detailBtnText: {
     color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.bold,
     fontStyle: 'italic',
@@ -859,11 +865,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tecnicoName: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.text,
     fontWeight: theme.fontWeight.semibold,
   },
   tecnicoClub: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
@@ -875,11 +883,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   playerPos: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: theme.letterSpacing.wide,
   },
   playerName: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.text,
     fontWeight: theme.fontWeight.semibold,
@@ -889,31 +900,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
+    borderTopColor: theme.colors.border,
     paddingTop: theme.spacing.md,
   },
   playerStat: {
     alignItems: 'center',
   },
   playerStatValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.bold,
   },
   playerStatLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.xs,
     textTransform: 'uppercase',
+    letterSpacing: theme.letterSpacing.wide,
   },
   playerRight: {
     alignItems: 'flex-end',
   },
   playerClub: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
   },
   tecnicoPts: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
@@ -925,16 +941,19 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   totalLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
   },
   totalValue: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.primary,
   },
   dueloText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.warning,
     marginTop: theme.spacing.xs,
@@ -947,11 +966,14 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   reservaPos: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: theme.letterSpacing.wide,
   },
   reservaName: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.text,
     fontWeight: theme.fontWeight.semibold,
@@ -961,7 +983,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
+    borderTopColor: theme.colors.border,
     paddingTop: theme.spacing.md,
   },
   compRow: {
@@ -969,10 +991,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   compFormacao: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.text,
   },
   compPts: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
@@ -990,14 +1014,18 @@ const styles = StyleSheet.create({
     padding: theme.spacing['2xl'],
     width: '100%',
     maxWidth: 340,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   modalTitle: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
+    letterSpacing: theme.letterSpacing.tight,
   },
   modalMsg: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     lineHeight: theme.spacing.xl,
@@ -1014,8 +1042,10 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
+    backgroundColor: theme.colors.surface,
   },
   modalCancelText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.textSecondary,
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,
@@ -1028,6 +1058,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmText: {
+    fontFamily: theme.fonts.body,
     color: '#fff',
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,
@@ -1043,13 +1074,17 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   substituicaoText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.text,
     marginTop: theme.spacing.xs,
   },
   substituicaoDetalhe: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
@@ -1074,9 +1109,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryGlow,
   },
   viewToggleText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textMuted,
     fontWeight: theme.fontWeight.medium,
+    letterSpacing: theme.letterSpacing.wide,
   },
   viewToggleTextActive: {
     color: theme.colors.primary,

@@ -1,4 +1,4 @@
-import { Animated, StyleSheet, View, ViewProps } from 'react-native';
+import { Animated, StyleSheet, ViewProps } from 'react-native';
 import { theme, useFadeIn } from '../theme';
 
 interface CardProps extends ViewProps {
@@ -42,6 +42,6 @@ const styles = StyleSheet.create({
   },
   highlight: {
     borderColor: theme.colors.primary,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
 });

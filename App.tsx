@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, Text, StatusBar } from 'react-native';
+import { Platform, Text, StatusBar, View, ActivityIndicator } from 'react-native';
+import { useFonts } from 'expo-font';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { theme } from './src/theme';
 import { APP_VERSION } from './src/config';
 import { checkForUpdate, getLastPromptedVersion } from './src/services/versionCheck';
@@ -59,8 +62,40 @@ if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker'
   });
 }
 
+const TAB_ICONS: Record<string, { active: string; inactive: string }> = {
+  Status: { active: '⚡', inactive: '⚡' },
+  Escalações: { active: '📋', inactive: '📋' },
+  Atletas: { active: '👤', inactive: '👤' },
+  Ligas: { active: '🏆', inactive: '🏆' },
+};
+
+function TabIcon({ routeName, focused, color }: { routeName: string; focused: boolean; color: string }) {
+  const icons = TAB_ICONS[routeName] || { active: '•', inactive: '•' };
+  return (
+    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
+      {focused ? icons.active : icons.inactive}
+    </Text>
+  );
+}
+
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'DM_Serif_Display_400Regular': DMSerifDisplay_400Regular,
+    'DMSans_400Regular': DMSans_400Regular,
+    'DMSans_500Medium': DMSans_500Medium,
+    'DMSans_600SemiBold': DMSans_600SemiBold,
+    'DMSans_700Bold': DMSans_700Bold,
+  });
+
+  const [splashDone, setSplashDone] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{ latest: string; current: string } | null>(null);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      const t = setTimeout(() => setSplashDone(true), 200);
+      return () => clearTimeout(t);
+    }
+  }, [fontsLoaded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +111,17 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  if (!splashDone) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: theme.fonts.heading, fontSize: 32, color: theme.colors.text, letterSpacing: -0.5 }}>
+          EscalarML
+        </Text>
+        <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 20 }} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -94,16 +140,18 @@ export default function App() {
             backgroundColor: theme.colors.surface,
             borderTopColor: theme.colors.border,
             borderTopWidth: 1,
-            paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-            paddingTop: 8,
-            height: Platform.OS === 'ios' ? 85 : 65,
+            paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+            paddingTop: 10,
+            height: Platform.OS === 'ios' ? 90 : 68,
           },
           tabBarActiveTintColor: theme.colors.primary,
           tabBarInactiveTintColor: theme.colors.textMuted,
           tabBarLabelStyle: {
+            fontFamily: theme.fonts.body,
             fontSize: theme.fontSize.xs,
-            fontWeight: theme.fontWeight.semibold,
-            marginTop: 2,
+            fontWeight: theme.fontWeight.medium,
+            letterSpacing: theme.letterSpacing.wide,
+            marginTop: 4,
           },
         }}
       >
@@ -111,8 +159,8 @@ export default function App() {
           name="Status"
           component={StatusStack}
           options={{
-            tabBarIcon: ({ color }) => (
-              <Text style={{ fontSize: 18, color }}>⚡</Text>
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon routeName="Status" focused={focused} color={color} />
             ),
           }}
         />
@@ -120,8 +168,8 @@ export default function App() {
           name="Escalações"
           component={LineupsStack}
           options={{
-            tabBarIcon: ({ color }) => (
-              <Text style={{ fontSize: 18, color }}>📋</Text>
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon routeName="Escalações" focused={focused} color={color} />
             ),
           }}
         />
@@ -129,8 +177,8 @@ export default function App() {
           name="Atletas"
           component={AtletasScreen}
           options={{
-            tabBarIcon: ({ color }) => (
-              <Text style={{ fontSize: 18, color }}>👤</Text>
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon routeName="Atletas" focused={focused} color={color} />
             ),
           }}
         />
@@ -138,8 +186,8 @@ export default function App() {
           name="Ligas"
           component={LigasStack}
           options={{
-            tabBarIcon: ({ color }) => (
-              <Text style={{ fontSize: 18, color }}>🏆</Text>
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon routeName="Ligas" focused={focused} color={color} />
             ),
           }}
         />

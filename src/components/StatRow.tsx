@@ -47,14 +47,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   value: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.bold,
   },
   label: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     marginTop: 2,
     textTransform: 'uppercase',
+    letterSpacing: theme.letterSpacing.wide,
   },
 });

@@ -21,17 +21,17 @@ export default function Badge({ label, variant = 'neutral', size = 'sm' }: Badge
 }
 
 const badgeStyles = StyleSheet.create({
-  primaryBg: { backgroundColor: theme.colors.primaryGlow },
-  primaryText: { color: theme.colors.primary },
-  accentBg: { backgroundColor: theme.colors.accentGlow },
+  primaryBg: { backgroundColor: theme.colors.primaryGlow, borderColor: 'rgba(35,134,54,0.3)' },
+  primaryText: { color: theme.colors.primaryLight },
+  accentBg: { backgroundColor: theme.colors.accentGlow, borderColor: 'rgba(210,153,34,0.3)' },
   accentText: { color: theme.colors.accent },
-  infoBg: { backgroundColor: theme.colors.infoGlow },
+  infoBg: { backgroundColor: theme.colors.infoGlow, borderColor: 'rgba(88,166,255,0.3)' },
   infoText: { color: theme.colors.info },
-  dangerBg: { backgroundColor: 'rgba(239,68,68,0.12)' },
+  dangerBg: { backgroundColor: 'rgba(248,81,73,0.12)', borderColor: 'rgba(248,81,73,0.3)' },
   dangerText: { color: theme.colors.danger },
-  warningBg: { backgroundColor: 'rgba(249,115,22,0.12)' },
+  warningBg: { backgroundColor: 'rgba(210,153,34,0.12)', borderColor: 'rgba(210,153,34,0.3)' },
   warningText: { color: theme.colors.warning },
-  neutralBg: { backgroundColor: theme.colors.surfaceHighlight },
+  neutralBg: { backgroundColor: theme.colors.surfaceHighlight, borderColor: theme.colors.border },
   neutralText: { color: theme.colors.textSecondary },
 });
 
@@ -41,14 +41,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     alignSelf: 'flex-start',
+    borderWidth: 1,
   },
   sm: {},
   md: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
   },
   text: {
+    fontFamily: theme.fonts.body,
     fontWeight: theme.fontWeight.semibold,
+    letterSpacing: theme.letterSpacing.wide,
   },
   smText: {
     fontSize: theme.fontSize.xs,

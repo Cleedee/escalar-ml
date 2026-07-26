@@ -118,7 +118,7 @@ export default function LeaguesScreen({ navigation }: any) {
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => navigation.navigate('LeagueDetail', { league: item })}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
             <Card>
               <View style={styles.cardTop}>
@@ -146,9 +146,7 @@ export default function LeaguesScreen({ navigation }: any) {
         )}
       />
 
-      <TouchableOpacity style={styles.addBtn} onPress={openForm}>
-        <Text style={styles.addBtnText}>+ Nova Liga</Text>
-      </TouchableOpacity>
+      <Button variant="primary" label="+ Nova Liga" onPress={openForm} />
 
       <Modal visible={showForm} transparent animationType="fade">
           <View style={styles.modalOverlay}>
@@ -276,11 +274,12 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
   },
   title: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize['3xl'],
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.md,
+    letterSpacing: theme.letterSpacing.tight,
   },
   list: {
     paddingHorizontal: theme.spacing.lg,
@@ -291,6 +290,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.textMuted,
     fontSize: theme.fontSize.md,
   },
@@ -301,11 +301,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   cardNome: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.semibold,
     color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
   },
   cardModalidade: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.primary,
     fontWeight: theme.fontWeight.semibold,
@@ -315,10 +317,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryGlow,
   },
   cardTimes: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
   },
   cardRodadas: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textMuted,
     marginTop: 2,
@@ -330,28 +334,15 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   copyBtnText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.info,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
   },
   deleteBtnText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.danger,
     fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  addBtn: {
-    position: 'absolute',
-    bottom: theme.spacing.xl,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  addBtnText: {
-    color: '#fff',
-    fontSize: theme.fontSize.lg,
     fontWeight: theme.fontWeight.semibold,
   },
   modalOverlay: {
@@ -369,19 +360,23 @@ const styles = StyleSheet.create({
     padding: theme.spacing['2xl'],
     width: '100%',
     maxWidth: 380,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   modalTitle: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.xl,
-    fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
     marginBottom: theme.spacing.lg,
+    letterSpacing: theme.letterSpacing.tight,
   },
   label: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: theme.letterSpacing.wider,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.md,
   },
@@ -389,6 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     color: theme.colors.text,
     borderWidth: 1,
@@ -422,10 +418,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryGlow,
   },
   pickerText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
   },
   pickerTextSm: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textSecondary,
   },
@@ -434,6 +432,7 @@ const styles = StyleSheet.create({
     fontWeight: theme.fontWeight.semibold,
   },
   hint: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.sm,
@@ -451,8 +450,10 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     alignItems: 'center',
+    backgroundColor: theme.colors.surface,
   },
   cancelBtnText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.textSecondary,
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,
@@ -465,6 +466,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
+    fontFamily: theme.fonts.body,
     color: '#fff',
     fontSize: theme.fontSize.base,
     fontWeight: theme.fontWeight.semibold,

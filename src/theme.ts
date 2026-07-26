@@ -1,43 +1,61 @@
-import { Animated } from 'react-native';
+import { Animated, Platform } from 'react-native';
 import { useRef, useEffect } from 'react';
 
 export const theme = {
   colors: {
-    bg: '#0a0e1a',
-    surface: '#111827',
-    surfaceElevated: '#1a2332',
-    surfaceHighlight: '#1e293b',
+    bg: '#0c0f14',
+    surface: '#14181f',
+    surfaceElevated: '#1b2129',
+    surfaceHighlight: '#252c36',
 
-    text: '#f1f5f9',
-    textSecondary: '#94a3b8',
-    textMuted: '#64748b',
+    text: '#e6edf3',
+    textSecondary: '#8b949e',
+    textMuted: '#6e7681',
 
-    primary: '#22c55e',
-    primaryLight: '#4ade80',
-    primaryDark: '#16a34a',
-    primaryGlow: 'rgba(34,197,94,0.12)',
+    primary: '#238636',
+    primaryLight: '#2ea043',
+    primaryDark: '#19672b',
+    primaryGlow: 'rgba(35,134,54,0.15)',
 
-    accent: '#f59e0b',
-    accentGlow: 'rgba(245,158,11,0.12)',
+    accent: '#d29922',
+    accentGlow: 'rgba(210,153,34,0.15)',
 
-    info: '#3b82f6',
-    infoGlow: 'rgba(59,130,246,0.12)',
+    info: '#58a6ff',
+    infoGlow: 'rgba(88,166,255,0.15)',
 
-    danger: '#ef4444',
-    warning: '#f97316',
-    purple: '#a855f7',
+    danger: '#f85149',
+    warning: '#d29922',
+    purple: '#bc8cff',
 
-    border: '#1e293b',
-    borderLight: '#334155',
+    border: '#21262d',
+    borderLight: '#30363d',
 
     overlay: 'rgba(0,0,0,0.7)',
     overlayLight: 'rgba(0,0,0,0.5)',
 
-    green: '#22c55e',
-    red: '#ef4444',
-    amber: '#f59e0b',
-    blue: '#3b82f6',
-    orange: '#f97316',
+    green: '#238636',
+    red: '#f85149',
+    amber: '#d29922',
+    blue: '#58a6ff',
+    orange: '#d29922',
+  },
+
+  fonts: {
+    heading: Platform.select({
+      ios: 'DM Serif Display',
+      android: 'DM_Serif_Display',
+      default: 'DM Serif Display',
+    }),
+    body: Platform.select({
+      ios: 'DM Sans',
+      android: 'DM_Sans',
+      default: 'DM Sans',
+    }),
+    mono: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
   },
 
   spacing: {
@@ -48,26 +66,27 @@ export const theme = {
     xl: 20,
     '2xl': 24,
     '3xl': 32,
+    '4xl': 40,
   },
 
   borderRadius: {
     sm: 6,
-    md: 8,
-    lg: 12,
-    xl: 16,
+    md: 10,
+    lg: 14,
+    xl: 20,
     full: 9999,
   },
 
   fontSize: {
-    xs: 10,
-    sm: 12,
-    base: 14,
+    xs: 11,
+    sm: 13,
+    base: 15,
     md: 15,
-    lg: 16,
-    xl: 18,
-    '2xl': 20,
-    '3xl': 22,
-    '4xl': 32,
+    lg: 17,
+    xl: 20,
+    '2xl': 24,
+    '3xl': 28,
+    '4xl': 36,
   },
 
   fontWeight: {
@@ -77,50 +96,65 @@ export const theme = {
     bold: '700' as const,
   },
 
+  letterSpacing: {
+    tight: -0.3,
+    normal: 0,
+    wide: 0.8,
+    wider: 1.5,
+  },
+
   shadow: {
     sm: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.3,
-      shadowRadius: 3,
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
       elevation: 2,
     },
     md: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.35,
-      shadowRadius: 6,
-      elevation: 4,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
     },
     lg: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
+      shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.4,
-      shadowRadius: 10,
-      elevation: 8,
+      shadowRadius: 14,
+      elevation: 10,
     },
+    glow: (color: string) => ({
+      shadowColor: color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 12,
+      elevation: 6,
+    }),
   },
 } as const;
 
 export function useFadeIn(delay = 0) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(12)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 400,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timer);
   }, [delay]);
 
   return { opacity, translateY };
@@ -130,15 +164,17 @@ export function useSlideIn(direction: 'left' | 'right' | 'up' | 'down' = 'up', d
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 350,
-      delay,
-      useNativeDriver: true,
-    }).start();
+    const timer = setTimeout(() => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, delay);
+    return () => clearTimeout(timer);
   }, [delay]);
 
-  const from = direction === 'left' ? -20 : direction === 'right' ? 20 : direction === 'up' ? 16 : -16;
+  const from = direction === 'left' ? -24 : direction === 'right' ? 24 : direction === 'up' ? 20 : -20;
   const translateX = direction === 'left' || direction === 'right' ? from : 0;
   const translateY = direction === 'up' || direction === 'down' ? from : 0;
 
@@ -149,4 +185,21 @@ export function useSlideIn(direction: 'left' | 'right' | 'up' | 'down' = 'up', d
       { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [translateY, 0] }) },
     ],
   };
+}
+
+export function usePulse() {
+  const anim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 0.6, duration: 1000, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return { opacity: anim };
 }

@@ -115,7 +115,7 @@ export default function LineupsScreen({ navigation }: any) {
               onPress={() =>
                 navigation.navigate('LineupDetail', { lineup: item })
               }
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
               <Card>
                 <View style={styles.cardHeader}>
@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   arrowText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize['3xl'],
     color: theme.colors.textSecondary,
     fontWeight: theme.fontWeight.semibold,
@@ -200,15 +201,18 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.lg,
   },
   rodadaLabel: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: theme.letterSpacing.wider,
   },
   rodadaValue: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize['4xl'],
     fontWeight: theme.fontWeight.bold,
     color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
   },
   atualBtn: {
     marginLeft: theme.spacing.sm,
@@ -219,6 +223,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   atualBtnText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.primary,
     fontSize: theme.fontSize.sm,
     fontWeight: theme.fontWeight.semibold,
@@ -236,6 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   emptyText: {
+    fontFamily: theme.fonts.body,
     color: theme.colors.textMuted,
     fontSize: theme.fontSize.md,
     textAlign: 'center',
@@ -251,16 +257,19 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   cardNome: {
+    fontFamily: theme.fonts.heading,
     fontSize: theme.fontSize.lg,
-    fontWeight: theme.fontWeight.semibold,
     color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
   },
   cardTeam: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.warning,
     marginBottom: theme.spacing.xs,
   },
   cardFormacao: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
@@ -270,10 +279,12 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   cardPlayer: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.textSecondary,
   },
   cardMore: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.sm,
     color: theme.colors.textMuted,
     marginTop: 2,
@@ -282,10 +293,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderLight,
+    borderTopColor: theme.colors.border,
     paddingTop: theme.spacing.sm,
   },
   cardDate: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
   },
@@ -294,10 +306,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listFooterText: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.primary,
   },
   cardOrcamento: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
   },

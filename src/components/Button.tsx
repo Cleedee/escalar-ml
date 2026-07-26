@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity, TouchableOpacityProps, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, TouchableOpacityProps } from 'react-native';
 import { theme } from '../theme';
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -17,7 +17,7 @@ export default function Button({ variant = 'primary', size = 'md', label, style,
         props.disabled && styles.disabled,
         style,
       ]}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       {...props}
     >
       <Text style={[styles.text, styles[`text_${variant}`], props.disabled && styles.textDisabled]}>
@@ -29,7 +29,7 @@ export default function Button({ variant = 'primary', size = 'md', label, style,
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: theme.borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -40,16 +40,18 @@ const styles = StyleSheet.create({
   outline: {
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surface,
   },
   danger: {
     borderWidth: 1,
     borderColor: theme.colors.danger,
+    backgroundColor: 'rgba(248,81,73,0.08)',
   },
   ghost: {
     backgroundColor: 'transparent',
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   size_sm: {
     paddingVertical: 10,
@@ -64,8 +66,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing['2xl'],
   },
   text: {
+    fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.md,
     fontWeight: theme.fontWeight.semibold,
+    letterSpacing: theme.letterSpacing.wide,
   },
   text_primary: {
     color: '#fff',
@@ -80,6 +84,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   textDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
