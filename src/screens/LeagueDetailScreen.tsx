@@ -310,7 +310,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       lineup.nome = `${team.nome} (importado)`;
       await saveLineup(lineup);
       setLineups((prev) => [...prev, lineup]);
-      navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup, league } });
+      navigation.navigate('LineupDetail', { lineup, league });
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível importar a escalação do time.');
     }
@@ -563,7 +563,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       };
       await saveLineup(lineup);
       setGerenciandoBot(null);
-      navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup, league } });
+      navigation.navigate('LineupDetail', { lineup, league });
     } catch (e: any) {
       Alert.alert('Erro', e?.message || 'Falha ao escalar bot');
     } finally {
@@ -846,7 +846,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               {(() => {
                 const teamLineup = lineups.find((l) => l.atribuido_a_team_id === item.id && l.rodada === rodadaSelecionada);
                 return teamLineup ? (
-                  <TouchableOpacity style={styles.lineupActionBtn} onPress={() => navigation.navigate('Escalações', { screen: 'LineupDetail', params: { lineup: teamLineup, league } })}>
+                  <TouchableOpacity style={styles.lineupActionBtn} onPress={() => navigation.navigate('LineupDetail', { lineup: teamLineup, league })}>
                     <Text style={styles.lineupActionBtnText}>📋</Text>
                   </TouchableOpacity>
                 ) : null;

@@ -159,11 +159,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   };
 
   const handleVoltar = () => {
-    if (league) {
-      navigation.navigate('Ligas', { screen: 'LeagueDetail', params: { league } });
-    } else {
-      navigation.goBack();
-    }
+    navigation.goBack();
   };
 
   const handleSimularSubstituicao = () => {
@@ -711,8 +707,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       <Button
         variant="primary"
         label="Gerar nova escalação"
-        onPress={() =>
-          navigation.navigate('NewLineup', {
+        onPress={() => {
+          const params = {
             rodada: lineup.rodada,
             nome: `Nova ${lineup.nome}`,
             orcamento: String(lineup.params?.orcamento ?? 100),
@@ -723,8 +719,13 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             reserva_luxo: lineup.params?.reserva_luxo ?? true,
             obrigarText: (lineup.params?.obrigar ?? []).join(','),
             excluirText: (lineup.params?.excluir ?? []).join(','),
-          })
-        }
+          };
+          if (league) {
+            navigation.getParent()?.navigate('Escalações', { screen: 'NewLineup', params });
+          } else {
+            navigation.navigate('NewLineup', params);
+          }
+        }}
       />
 
       <Button variant="outline" label="Exportar JSON" onPress={handleExportJson} />

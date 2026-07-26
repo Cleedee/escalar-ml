@@ -52,6 +52,8 @@ function LigasStack() {
     <Stack2.Navigator screenOptions={{ headerShown: false }}>
       <Stack2.Screen name="LeaguesList" component={LeaguesScreen} />
       <Stack2.Screen name="LeagueDetail" component={LeagueDetailScreen} />
+      <Stack2.Screen name="LineupDetail" component={LineupDetailScreen} />
+      <Stack2.Screen name="Justificar" component={JustificarScreen} />
     </Stack2.Navigator>
   );
 }
