@@ -1,0 +1,290 @@
+- generic [ref=f1e10]:
+  - generic [ref=f1e11]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: Status do Mercado
+                      - generic: EscalarML v1.3.0
+                    - generic:
+                      - generic:
+                        - generic: Mercado Fechado (rodada rolando)
+                        - generic: Rodada 20
+                      - generic: Ver detalhes
+                    - generic:
+                      - generic: https://escalar-no-cartola.onrender.com
+                      - generic: Versão 1.3.0 · 2026-07-23
+    - generic [ref=f1e14]:
+      - generic [ref=f1e15]: Atletas
+      - textbox "Buscar por nome..." [ref=f1e16]
+      - generic [ref=f1e17]: Posição
+      - generic [ref=f1e22]:
+        - generic [ref=f1e23] [cursor=pointer]: Todas
+        - generic [ref=f1e25] [cursor=pointer]: Goleiro
+        - generic [ref=f1e27] [cursor=pointer]: Lateral
+        - generic [ref=f1e29] [cursor=pointer]: Zagueiro
+        - generic [ref=f1e31] [cursor=pointer]: Meia
+        - generic [ref=f1e33] [cursor=pointer]: Atacante
+        - generic [ref=f1e35] [cursor=pointer]: Técnico
+      - generic [ref=f1e37]: Status
+      - generic [ref=f1e42]:
+        - generic [ref=f1e43] [cursor=pointer]: Todos
+        - generic [ref=f1e45] [cursor=pointer]: Provável
+        - generic [ref=f1e47] [cursor=pointer]: Duvidoso
+        - generic [ref=f1e49] [cursor=pointer]: Suspenso
+        - generic [ref=f1e51] [cursor=pointer]: Lesionado
+        - generic [ref=f1e53] [cursor=pointer]: Nulo
+      - generic [ref=f1e55]: Ordenar
+      - generic [ref=f1e60]:
+        - generic [ref=f1e61] [cursor=pointer]: Preço ↓
+        - generic [ref=f1e63] [cursor=pointer]: Preço ↑
+        - generic [ref=f1e65] [cursor=pointer]: Média ↓
+        - generic [ref=f1e67] [cursor=pointer]: Média ↑
+      - generic [ref=f1e69]: 221 atletas encontrados
+      - generic [ref=f1e71]:
+        - generic [ref=f1e73]:
+          - generic [ref=f1e74]:
+            - generic [ref=f1e75]:
+              - generic [ref=f1e76]: Neymar
+              - generic [ref=f1e77]: Meia · SAN
+            - generic [ref=f1e78]: Provável
+          - generic [ref=f1e80]:
+            - generic [ref=f1e81]:
+              - generic [ref=f1e82]: C$ 18.96
+              - generic [ref=f1e83]: Preço
+            - generic [ref=f1e84]:
+              - generic [ref=f1e85]: "8.4"
+              - generic [ref=f1e86]: Média
+            - generic [ref=f1e87]:
+              - generic [ref=f1e88]: "8"
+              - generic [ref=f1e89]: Jogos
+            - generic [ref=f1e90]:
+              - generic [ref=f1e91]: C$ 20.12
+              - generic [ref=f1e92]: Projetado
+          - generic [ref=f1e93]:
+            - generic [ref=f1e94]: "Variação: +0.00"
+            - generic [ref=f1e95]: "Val.: 85.0%"
+        - generic [ref=f1e97]:
+          - generic [ref=f1e98]:
+            - generic [ref=f1e99]:
+              - generic [ref=f1e100]: Pedro
+              - generic [ref=f1e101]: Atacante · FLA
+            - generic [ref=f1e102]: Provável
+          - generic [ref=f1e104]:
+            - generic [ref=f1e105]:
+              - generic [ref=f1e106]: C$ 18.63
+              - generic [ref=f1e107]: Preço
+            - generic [ref=f1e108]:
+              - generic [ref=f1e109]: "9.4"
+              - generic [ref=f1e110]: Média
+            - generic [ref=f1e111]:
+              - generic [ref=f1e112]: "17"
+              - generic [ref=f1e113]: Jogos
+            - generic [ref=f1e114]:
+              - generic [ref=f1e115]: C$ 20.11
+              - generic [ref=f1e116]: Projetado
+          - generic [ref=f1e117]:
+            - generic [ref=f1e118]: "Variação: +0.13"
+            - generic [ref=f1e119]: "Val.: 85.0%"
+        - generic [ref=f1e121]:
+          - generic [ref=f1e122]:
+            - generic [ref=f1e123]:
+              - generic [ref=f1e124]: Arias
+              - generic [ref=f1e125]: Meia · PAL
+            - generic [ref=f1e126]: Provável
+          - generic [ref=f1e128]:
+            - generic [ref=f1e129]:
+              - generic [ref=f1e130]: C$ 14.10
+              - generic [ref=f1e131]: Preço
+            - generic [ref=f1e132]:
+              - generic [ref=f1e133]: "6.4"
+              - generic [ref=f1e134]: Média
+            - generic [ref=f1e135]:
+              - generic [ref=f1e136]: "14"
+              - generic [ref=f1e137]: Jogos
+            - generic [ref=f1e138]:
+              - generic [ref=f1e139]: C$ 14.78
+              - generic [ref=f1e140]: Projetado
+          - generic [ref=f1e141]:
+            - generic [ref=f1e142]: "Variação: +0.33"
+            - generic [ref=f1e143]: "Val.: 85.0%"
+        - generic [ref=f1e145]:
+          - generic [ref=f1e146]:
+            - generic [ref=f1e147]:
+              - generic [ref=f1e148]: Leonardo Jardim
+              - generic [ref=f1e149]: Técnico · FLA
+            - generic [ref=f1e150]: Provável
+          - generic [ref=f1e152]:
+            - generic [ref=f1e153]:
+              - generic [ref=f1e154]: C$ 14.01
+              - generic [ref=f1e155]: Preço
+            - generic [ref=f1e156]:
+              - generic [ref=f1e157]: "7.4"
+              - generic [ref=f1e158]: Média
+            - generic [ref=f1e159]:
+              - generic [ref=f1e160]: "15"
+              - generic [ref=f1e161]: Jogos
+            - generic [ref=f1e162]:
+              - generic [ref=f1e163]: C$ 14.91
+              - generic [ref=f1e164]: Projetado
+          - generic [ref=f1e165]:
+            - generic [ref=f1e166]: "Variação: +0.25"
+            - generic [ref=f1e167]: "Val.: 85.0%"
+        - generic [ref=f1e169]:
+          - generic [ref=f1e170]:
+            - generic [ref=f1e171]:
+              - generic [ref=f1e172]: Carlos Vinícius
+              - generic [ref=f1e173]: Atacante · GRE
+            - generic [ref=f1e174]: Provável
+          - generic [ref=f1e176]:
+            - generic [ref=f1e177]:
+              - generic [ref=f1e178]: C$ 13.93
+              - generic [ref=f1e179]: Preço
+            - generic [ref=f1e180]:
+              - generic [ref=f1e181]: "5.6"
+              - generic [ref=f1e182]: Média
+            - generic [ref=f1e183]:
+              - generic [ref=f1e184]: "17"
+              - generic [ref=f1e185]: Jogos
+            - generic [ref=f1e186]:
+              - generic [ref=f1e187]: C$ 14.42
+              - generic [ref=f1e188]: Projetado
+          - generic [ref=f1e189]:
+            - generic [ref=f1e190]: "Variação: +0.00"
+            - generic [ref=f1e191]: "Val.: 85.0%"
+        - generic [ref=f1e193]:
+          - generic [ref=f1e194]:
+            - generic [ref=f1e195]:
+              - generic [ref=f1e196]: Juninho Capixaba
+              - generic [ref=f1e197]: Lateral · RBB
+            - generic [ref=f1e198]: Provável
+          - generic [ref=f1e200]:
+            - generic [ref=f1e201]:
+              - generic [ref=f1e202]: C$ 13.92
+              - generic [ref=f1e203]: Preço
+            - generic [ref=f1e204]:
+              - generic [ref=f1e205]: "7.5"
+              - generic [ref=f1e206]: Média
+            - generic [ref=f1e207]:
+              - generic [ref=f1e208]: "16"
+              - generic [ref=f1e209]: Jogos
+            - generic [ref=f1e210]:
+              - generic [ref=f1e211]: C$ 14.86
+              - generic [ref=f1e212]: Projetado
+          - generic [ref=f1e213]:
+            - generic [ref=f1e214]: "Variação: +0.00"
+            - generic [ref=f1e215]: "Val.: 85.0%"
+        - generic [ref=f1e217]:
+          - generic [ref=f1e218]:
+            - generic [ref=f1e219]:
+              - generic [ref=f1e220]: Luciano
+              - generic [ref=f1e221]: Atacante · SAO
+            - generic [ref=f1e222]: Provável
+          - generic [ref=f1e224]:
+            - generic [ref=f1e225]:
+              - generic [ref=f1e226]: C$ 13.39
+              - generic [ref=f1e227]: Preço
+            - generic [ref=f1e228]:
+              - generic [ref=f1e229]: "5.3"
+              - generic [ref=f1e230]: Média
+            - generic [ref=f1e231]:
+              - generic [ref=f1e232]: "15"
+              - generic [ref=f1e233]: Jogos
+            - generic [ref=f1e234]:
+              - generic [ref=f1e235]: C$ 13.83
+              - generic [ref=f1e236]: Projetado
+          - generic [ref=f1e237]:
+            - generic [ref=f1e238]: "Variação: -0.75"
+            - generic [ref=f1e239]: "Val.: 85.0%"
+        - generic [ref=f1e241]:
+          - generic [ref=f1e242]:
+            - generic [ref=f1e243]:
+              - generic [ref=f1e244]: Matheus Bidu
+              - generic [ref=f1e245]: Lateral · COR
+            - generic [ref=f1e246]: Provável
+          - generic [ref=f1e248]:
+            - generic [ref=f1e249]:
+              - generic [ref=f1e250]: C$ 13.30
+              - generic [ref=f1e251]: Preço
+            - generic [ref=f1e252]:
+              - generic [ref=f1e253]: "7.9"
+              - generic [ref=f1e254]: Média
+            - generic [ref=f1e255]:
+              - generic [ref=f1e256]: "15"
+              - generic [ref=f1e257]: Jogos
+            - generic [ref=f1e258]:
+              - generic [ref=f1e259]: C$ 14.31
+              - generic [ref=f1e260]: Projetado
+          - generic [ref=f1e261]:
+            - generic [ref=f1e262]: "Variação: +0.47"
+            - generic [ref=f1e263]: "Val.: 85.0%"
+        - generic [ref=f1e265]:
+          - generic [ref=f1e266]:
+            - generic [ref=f1e267]:
+              - generic [ref=f1e268]: Cuiabano
+              - generic [ref=f1e269]: Lateral · VAS
+            - generic [ref=f1e270]: Provável
+          - generic [ref=f1e272]:
+            - generic [ref=f1e273]:
+              - generic [ref=f1e274]: C$ 13.25
+              - generic [ref=f1e275]: Preço
+            - generic [ref=f1e276]:
+              - generic [ref=f1e277]: "7.5"
+              - generic [ref=f1e278]: Média
+            - generic [ref=f1e279]:
+              - generic [ref=f1e280]: "11"
+              - generic [ref=f1e281]: Jogos
+            - generic [ref=f1e282]:
+              - generic [ref=f1e283]: C$ 14.17
+              - generic [ref=f1e284]: Projetado
+          - generic [ref=f1e285]:
+            - generic [ref=f1e286]: "Variação: +0.00"
+            - generic [ref=f1e287]: "Val.: 85.0%"
+        - generic [ref=f1e289]:
+          - generic [ref=f1e290]:
+            - generic [ref=f1e291]:
+              - generic [ref=f1e292]: Yuri Alberto
+              - generic [ref=f1e293]: Atacante · COR
+            - generic [ref=f1e294]: Provável
+          - generic [ref=f1e296]:
+            - generic [ref=f1e297]:
+              - generic [ref=f1e298]: C$ 12.95
+              - generic [ref=f1e299]: Preço
+            - generic [ref=f1e300]:
+              - generic [ref=f1e301]: "4.5"
+              - generic [ref=f1e302]: Média
+            - generic [ref=f1e303]:
+              - generic [ref=f1e304]: "15"
+              - generic [ref=f1e305]: Jogos
+            - generic [ref=f1e306]:
+              - generic [ref=f1e307]: C$ 13.21
+              - generic [ref=f1e308]: Projetado
+          - generic [ref=f1e309]:
+            - generic [ref=f1e310]: "Variação: +1.24"
+            - generic [ref=f1e311]: "Val.: 85.0%"
+  - tablist [ref=f1e313]:
+    - tab "⚡ ⚡ Status" [ref=f1e315] [cursor=pointer]:
+      - generic [ref=f1e316]:
+        - generic [ref=f1e317]: ⚡
+        - generic [ref=f1e319]: ⚡
+      - generic [ref=f1e321]: Status
+    - tab "📋 📋 Escalações" [ref=f1e323] [cursor=pointer]:
+      - generic [ref=f1e324]:
+        - generic [ref=f1e325]: 📋
+        - generic [ref=f1e327]: 📋
+      - generic [ref=f1e329]: Escalações
+    - tab "👤 👤 Atletas" [active] [selected] [ref=f1e331] [cursor=pointer]:
+      - generic [ref=f1e332]:
+        - generic [ref=f1e333]: 👤
+        - generic [ref=f1e335]: 👤
+      - generic [ref=f1e337]: Atletas
+    - tab "🏆 🏆 Ligas" [ref=f1e339] [cursor=pointer]:
+      - generic [ref=f1e340]:
+        - generic [ref=f1e341]: 🏆
+        - generic [ref=f1e343]: 🏆
+      - generic [ref=f1e345]: Ligas

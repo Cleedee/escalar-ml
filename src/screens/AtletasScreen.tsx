@@ -65,6 +65,9 @@ export default function AtletasScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('preco_desc');
+  const [showPosicao, setShowPosicao] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showOrdenar, setShowOrdenar] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFetch = (q: string, p: string, s: string) => {
@@ -117,56 +120,68 @@ export default function AtletasScreen() {
         onChangeText={handleQueryChange}
       />
 
-      <SectionHeader label="Posição" />
-      <View style={styles.filterRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-          {POSICOES.map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.filterChip, posicao === item.key && styles.filterChipActive]}
-              onPress={() => setPosicao(item.key)}
-            >
-              <Text style={[styles.filterChipText, posicao === item.key && styles.filterChipTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <TouchableOpacity style={styles.sectionToggle} onPress={() => setShowPosicao((v) => !v)} activeOpacity={0.7}>
+        <SectionHeader label="Posição" action={<Text style={styles.chevron}>{showPosicao ? '▲' : '▼'}</Text>} />
+      </TouchableOpacity>
+      {showPosicao && (
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+            {POSICOES.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[styles.filterChip, posicao === item.key && styles.filterChipActive]}
+                onPress={() => setPosicao(item.key)}
+              >
+                <Text style={[styles.filterChipText, posicao === item.key && styles.filterChipTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
-      <SectionHeader label="Status" />
-      <View style={styles.filterRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-          {STATUS_LIST.map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.filterChip, status === item.key && styles.filterChipActive]}
-              onPress={() => setStatus(item.key)}
-            >
-              <Text style={[styles.filterChipText, status === item.key && styles.filterChipTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <TouchableOpacity style={styles.sectionToggle} onPress={() => setShowStatus((v) => !v)} activeOpacity={0.7}>
+        <SectionHeader label="Status" action={<Text style={styles.chevron}>{showStatus ? '▲' : '▼'}</Text>} />
+      </TouchableOpacity>
+      {showStatus && (
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+            {STATUS_LIST.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[styles.filterChip, status === item.key && styles.filterChipActive]}
+                onPress={() => setStatus(item.key)}
+              >
+                <Text style={[styles.filterChipText, status === item.key && styles.filterChipTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
-      <SectionHeader label="Ordenar" />
-      <View style={styles.filterRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-          {SORT_OPTIONS.map((item) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.filterChip, sortBy === item.key && styles.filterChipActive]}
-              onPress={() => setSortBy(item.key)}
-            >
-              <Text style={[styles.filterChipText, sortBy === item.key && styles.filterChipTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <TouchableOpacity style={styles.sectionToggle} onPress={() => setShowOrdenar((v) => !v)} activeOpacity={0.7}>
+        <SectionHeader label="Ordenar" action={<Text style={styles.chevron}>{showOrdenar ? '▲' : '▼'}</Text>} />
+      </TouchableOpacity>
+      {showOrdenar && (
+        <View style={styles.filterRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+            {SORT_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[styles.filterChip, sortBy === item.key && styles.filterChipActive]}
+                onPress={() => setSortBy(item.key)}
+              >
+                <Text style={[styles.filterChipText, sortBy === item.key && styles.filterChipTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <Text style={styles.resultCount}>
         {filtered.length} atleta{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
@@ -260,6 +275,15 @@ const styles = StyleSheet.create({
   filterContent: {
     alignItems: 'center',
     flexDirection: 'row',
+  },
+  sectionToggle: {
+    paddingHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing['2xl'],
+  },
+  chevron: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
   },
   filterChip: {
     paddingHorizontal: theme.spacing.md,

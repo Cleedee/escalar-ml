@@ -20,8 +20,7 @@ const styles = StyleSheet.create({
   wrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: theme.spacing['2xl'],
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   line: {
     width: 3,
