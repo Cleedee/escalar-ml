@@ -100,6 +100,11 @@ export default function App() {
   }, [fontsLoaded]);
 
   useEffect(() => {
+    const t = setTimeout(() => setSplashDone(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
