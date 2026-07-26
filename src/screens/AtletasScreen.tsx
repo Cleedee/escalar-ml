@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -117,61 +118,55 @@ export default function AtletasScreen() {
       />
 
       <SectionHeader label="Posição" />
-      <FlatList
-        horizontal
-        data={POSICOES}
-        keyExtractor={(item) => item.key}
-        style={styles.filterList}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterChip, posicao === item.key && styles.filterChipActive]}
-            onPress={() => setPosicao(item.key)}
-          >
-            <Text style={[styles.filterChipText, posicao === item.key && styles.filterChipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+          {POSICOES.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.filterChip, posicao === item.key && styles.filterChipActive]}
+              onPress={() => setPosicao(item.key)}
+            >
+              <Text style={[styles.filterChipText, posicao === item.key && styles.filterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <SectionHeader label="Status" />
-      <FlatList
-        horizontal
-        data={STATUS_LIST}
-        keyExtractor={(item) => item.key}
-        style={styles.filterList}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterChip, status === item.key && styles.filterChipActive]}
-            onPress={() => setStatus(item.key)}
-          >
-            <Text style={[styles.filterChipText, status === item.key && styles.filterChipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+          {STATUS_LIST.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.filterChip, status === item.key && styles.filterChipActive]}
+              onPress={() => setStatus(item.key)}
+            >
+              <Text style={[styles.filterChipText, status === item.key && styles.filterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <SectionHeader label="Ordenar" />
-      <FlatList
-        horizontal
-        data={SORT_OPTIONS}
-        keyExtractor={(item) => item.key}
-        style={styles.filterList}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterChip, sortBy === item.key && styles.filterChipActive]}
-            onPress={() => setSortBy(item.key)}
-          >
-            <Text style={[styles.filterChipText, sortBy === item.key && styles.filterChipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+          {SORT_OPTIONS.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.filterChip, sortBy === item.key && styles.filterChipActive]}
+              onPress={() => setSortBy(item.key)}
+            >
+              <Text style={[styles.filterChipText, sortBy === item.key && styles.filterChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <Text style={styles.resultCount}>
         {filtered.length} atleta{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
@@ -257,14 +252,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
   },
-  filterList: {
-    maxHeight: 58,
+  filterRow: {
+    height: 44,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
   },
+  filterContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
   filterChip: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
