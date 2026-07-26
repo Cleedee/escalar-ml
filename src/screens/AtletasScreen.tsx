@@ -258,13 +258,13 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderLight,
   },
   filterList: {
-    maxHeight: 46,
+    maxHeight: 58,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
   },
   filterChip: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
