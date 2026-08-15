@@ -1,7 +1,9 @@
+export type Perfil = 'neutro' | 'agressivo' | 'conservador' | 'upside';
+
 export interface OtimizarParams {
   orcamento: number;
   formacao: string;
-  perfil: 'neutro' | 'agressivo' | 'conservador';
+  perfil: Perfil;
   foco: number;
   incluir_duvidosos: boolean;
   reserva_luxo: boolean;
@@ -25,6 +27,7 @@ export interface Player {
   jogos_num?: number;
   eficiencia?: number;
   tendencia?: string;
+  upside_score?: number;
 }
 
 export interface Reserva {
@@ -42,6 +45,7 @@ export interface Reserva {
   tendencia: string;
   eficiencia: number;
   luxo: boolean;
+  upside_score?: number;
 }
 
 export interface Tecnico {
@@ -57,6 +61,7 @@ export interface Tecnico {
   jogos_num?: number;
   eficiencia?: number;
   tendencia?: string;
+  upside_score?: number;
 }
 
 export interface SubstituicaoInfo {
@@ -121,7 +126,7 @@ export interface Team {
   ativo?: boolean;
   estrategia?: 'auto' | 'manual';
   foco?: number;
-  perfil?: 'neutro' | 'agressivo' | 'conservador';
+  perfil?: Perfil;
   obrigar?: number[];
   excluir?: number[];
 }
@@ -138,7 +143,7 @@ export interface BotEscalarRequest {
   pontos_lider: number;
   pontos_proximo: number;
   modalidade: 'patrimonio' | 'pontuacao';
-  estrategia: 'auto' | { perfil: 'neutro' | 'agressivo' | 'conservador'; foco: number };
+  estrategia: 'auto' | { perfil: Perfil; foco: number };
   obrigar?: number[];
   excluir?: number[];
 }
@@ -158,6 +163,7 @@ export interface BotPlayer {
   tendencia: string;
   eficiencia: number;
   role?: 'capitao';
+  upside_score?: number;
 }
 
 export interface BotReserva {
@@ -175,6 +181,7 @@ export interface BotReserva {
   tendencia: string;
   eficiencia: number;
   luxo: boolean;
+  upside_score?: number;
 }
 
 export interface BotEscalarResponse {
@@ -270,6 +277,35 @@ export interface Atleta {
 export interface AtletasResponse {
   total: number;
   atletas: Atleta[];
+}
+
+export interface UpsideAthlete {
+  atleta_id: number;
+  apelido: string;
+  clube: string;
+  posicao: string;
+  preco: number;
+  media: number;
+  desvio_padrao: number;
+  max: number;
+  p75: number;
+  p90: number;
+  upside_score: number;
+  freq_alta_6: number;
+  freq_alta_8: number;
+  freq_alta_10: number;
+  jogos: number;
+  status: string;
+  previsto: number;
+}
+
+export interface UpsideResponse {
+  total: number;
+  criteria: {
+    top: number;
+    min_jogos: number;
+  };
+  atletas: UpsideAthlete[];
 }
 
 export interface JustificarAtleta {

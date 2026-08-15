@@ -549,6 +549,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 </Text>
                 <Text style={styles.playerStatLabel}>Valorização</Text>
               </View>
+              {p.upside_score != null && (
+                <View style={styles.playerStat}>
+                  <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>
+                    {p.upside_score.toFixed(1)}
+                  </Text>
+                  <Text style={styles.playerStatLabel}>Upside</Text>
+                </View>
+              )}
             </View>
           </Card>
         );
@@ -639,6 +647,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                     </Text>
                     <Text style={styles.playerStatLabel}>Valorização</Text>
                   </View>
+                  {reserva.upside_score != null && (
+                    <View style={styles.playerStat}>
+                      <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>
+                        {reserva.upside_score.toFixed(1)}
+                      </Text>
+                      <Text style={styles.playerStatLabel}>Upside</Text>
+                    </View>
+                  )}
                 </View>
               </Card>
             );

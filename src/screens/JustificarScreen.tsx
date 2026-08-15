@@ -173,7 +173,8 @@ export default function JustificarScreen({ route, navigation }: any) {
           <View style={styles.perfilRowInner}>
             <Text style={styles.perfilName}>
               {p.perfil === 'neutro' ? 'Neutro' :
-               p.perfil === 'agressivo' ? 'Agressivo' : 'Conservador'}
+               p.perfil === 'agressivo' ? 'Agressivo' :
+               p.perfil === 'upside' ? 'Upside' : 'Conservador'}
             </Text>
             <Badge
               label={p.selecionado ? 'Selecionado' : 'Descartado'}

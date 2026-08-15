@@ -17,6 +17,7 @@ import NewLineupScreen from './src/screens/NewLineupScreen';
 import LineupDetailScreen from './src/screens/LineupDetailScreen';
 import JustificarScreen from './src/screens/JustificarScreen';
 import AtletasScreen from './src/screens/AtletasScreen';
+import UpsideScreen from './src/screens/UpsideScreen';
 import LeaguesScreen from './src/screens/LeaguesScreen';
 import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
 import HelpScreen from './src/screens/HelpScreen';
@@ -25,6 +26,7 @@ const Tab = createBottomTabNavigator();
 const StatusStackNav = createNativeStackNavigator();
 const Stack1 = createNativeStackNavigator();
 const Stack2 = createNativeStackNavigator();
+const Stack3 = createNativeStackNavigator();
 
 function StatusStack() {
   return (
@@ -55,6 +57,15 @@ function LigasStack() {
       <Stack2.Screen name="LineupDetail" component={LineupDetailScreen} />
       <Stack2.Screen name="Justificar" component={JustificarScreen} />
     </Stack2.Navigator>
+  );
+}
+
+function AtletasStack() {
+  return (
+    <Stack3.Navigator screenOptions={{ headerShown: false }}>
+      <Stack3.Screen name="AtletasList" component={AtletasScreen} />
+      <Stack3.Screen name="Upside" component={UpsideScreen} />
+    </Stack3.Navigator>
   );
 }
 
@@ -182,7 +193,7 @@ export default function App() {
         />
         <Tab.Screen
           name="Atletas"
-          component={AtletasScreen}
+          component={AtletasStack}
           options={{
             tabBarIcon: ({ focused, color }) => (
               <TabIcon routeName="Atletas" focused={focused} color={color} />

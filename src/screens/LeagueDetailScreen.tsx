@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
+import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Perfil, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
 import { fetchClubes, fetchMercado, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 import { theme } from '../theme';
@@ -32,6 +32,13 @@ const POS_ABBR: Record<number, string> = {
   5: 'ATA',
   6: 'TEC',
 };
+
+const PERFIS: Array<{ key: Perfil; label: string }> = [
+  { key: 'neutro', label: 'Neutro' },
+  { key: 'agressivo', label: 'Agressivo' },
+  { key: 'conservador', label: 'Conservador' },
+  { key: 'upside', label: 'Upside' },
+];
 
 function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { nome: string }>, rodada: number): Lineup {
   const clubMap: Record<number, string> = {};
@@ -146,7 +153,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [posicaoCampo, setPosicaoCampo] = useState('');
   const [estrategia, setEstrategia] = useState<'auto' | 'manual'>('auto');
   const [focoBot, setFocoBot] = useState(1.0);
-  const [perfilBot, setPerfilBot] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
+  const [perfilBot, setPerfilBot] = useState<Perfil>('neutro');
   const [gerenciandoBot, setGerenciandoBot] = useState<Team | null>(null);
   const [botLoading, setBotLoading] = useState(false);
   const [consolidando, setConsolidando] = useState(false);
@@ -156,7 +163,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [rodadaSelecionada, setRodadaSelecionada] = useState(1);
   const [editEstrategia, setEditEstrategia] = useState<'auto' | 'manual'>('auto');
   const [editFoco, setEditFoco] = useState(1.0);
-  const [editPerfil, setEditPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>('neutro');
+  const [editPerfil, setEditPerfil] = useState<Perfil>('neutro');
   const [editObrigarText, setEditObrigarText] = useState('');
   const [editExcluirText, setEditExcluirText] = useState('');
   const [mercadoAtletas, setMercadoAtletas] = useState<CartolaAthlete[]>([]);
@@ -447,7 +454,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       .catch(() => {});
   }, []);
 
-  function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team, perfil: string, foco: number): { params: OtimizarParams; response: Lineup['response'] } {
+  function mapBotResponseToLineup(botRes: BotEscalarResponse, bot: Team, perfil: Perfil, foco: number): { params: OtimizarParams; response: Lineup['response'] } {
     const mapPlayer = (p: BotEscalarResponse['players'][0]): Player => ({
       atleta_id: p.atleta_id,
       apelido: p.apelido,
@@ -459,6 +466,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       preco_projetado: p.preco_projetado,
       variacao_num: p.variacao_num,
       role: p.role === 'capitao' ? 'capitao' : undefined,
+      media_num: p.media_num,
+      jogos_num: p.jogos_num,
+      tendencia: p.tendencia,
+      eficiencia: p.eficiencia,
+      upside_score: p.upside_score,
     });
     const mapTecnico = (p: BotEscalarResponse['tecnico']): Tecnico => ({
       atleta_id: p.atleta_id,
@@ -468,6 +480,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       previsto: p.previsto,
       potential_valorizacao: p.potential_valorizacao,
       preco_projetado: p.preco_projetado,
+      media_num: p.media_num,
+      jogos_num: p.jogos_num,
+      tendencia: p.tendencia,
+      eficiencia: p.eficiencia,
+      upside_score: p.upside_score,
     });
     const reservas: Record<string, Reserva> = {};
     for (const [pos, r] of Object.entries(botRes.reservas)) {
@@ -486,6 +503,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         tendencia: r.tendencia,
         eficiencia: r.eficiencia,
         luxo: r.luxo || false,
+        upside_score: r.upside_score,
       };
     }
     return {
@@ -550,7 +568,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       const existingIdx = lineups.findIndex(
         (l) => l.atribuido_a_team_id === bot.id && l.rodada === rodadaAtual
       );
-      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot, resolvedPerfil, resolvedFoco);
+      const { params: otimizarParams, response } = mapBotResponseToLineup(result, bot, resolvedPerfil as Perfil, resolvedFoco);
       const lineup: Lineup = {
         id: existingIdx >= 0 ? lineups[existingIdx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome: `${bot.nome} - R${rodadaAtual}`,
@@ -710,7 +728,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             const result = await postBotEscalar(params);
             const resolvedPerfil = team.estrategia === 'auto' ? result.perfil : (team.perfil || 'neutro');
             const resolvedFoco = team.estrategia === 'auto' ? result.foco : (team.foco ?? 1.0);
-            const { params: otimizarParams, response } = mapBotResponseToLineup(result, team, resolvedPerfil, resolvedFoco);
+            const { params: otimizarParams, response } = mapBotResponseToLineup(result, team, resolvedPerfil as Perfil, resolvedFoco);
             const lineup: Lineup = {
               id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
               nome: `${team.nome} - R${rodada}`,
@@ -1013,24 +1031,17 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
                       <Text style={styles.label}>Perfil</Text>
                       <View style={styles.pickerRow}>
-                        <TouchableOpacity
-                          style={[styles.pickerItem, perfilBot === 'neutro' && styles.pickerActive]}
-                          onPress={() => setPerfilBot('neutro')}
-                        >
-                          <Text style={[styles.pickerText, perfilBot === 'neutro' && styles.pickerTextActive]}>Neutro</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.pickerItem, perfilBot === 'agressivo' && styles.pickerActive]}
-                          onPress={() => setPerfilBot('agressivo')}
-                        >
-                          <Text style={[styles.pickerText, perfilBot === 'agressivo' && styles.pickerTextActive]}>Agressivo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.pickerItem, perfilBot === 'conservador' && styles.pickerActive]}
-                          onPress={() => setPerfilBot('conservador')}
-                        >
-                          <Text style={[styles.pickerText, perfilBot === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
-                        </TouchableOpacity>
+                        {PERFIS.map((p) => (
+                          <TouchableOpacity
+                            key={p.key}
+                            style={[styles.pickerItem, perfilBot === p.key && styles.pickerActive]}
+                            onPress={() => setPerfilBot(p.key)}
+                          >
+                            <Text style={[styles.pickerText, perfilBot === p.key && styles.pickerTextActive]}>
+                              {p.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
                     </>
                   )}
@@ -1192,24 +1203,17 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
 
                   <Text style={styles.label}>Perfil</Text>
                   <View style={styles.pickerRow}>
-                    <TouchableOpacity
-                      style={[styles.pickerItem, editPerfil === 'neutro' && styles.pickerActive]}
-                      onPress={() => setEditPerfil('neutro')}
-                    >
-                      <Text style={[styles.pickerText, editPerfil === 'neutro' && styles.pickerTextActive]}>Neutro</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.pickerItem, editPerfil === 'agressivo' && styles.pickerActive]}
-                      onPress={() => setEditPerfil('agressivo')}
-                    >
-                      <Text style={[styles.pickerText, editPerfil === 'agressivo' && styles.pickerTextActive]}>Agressivo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.pickerItem, editPerfil === 'conservador' && styles.pickerActive]}
-                      onPress={() => setEditPerfil('conservador')}
-                    >
-                      <Text style={[styles.pickerText, editPerfil === 'conservador' && styles.pickerTextActive]}>Conservador</Text>
-                    </TouchableOpacity>
+                    {PERFIS.map((p) => (
+                      <TouchableOpacity
+                        key={p.key}
+                        style={[styles.pickerItem, editPerfil === p.key && styles.pickerActive]}
+                        onPress={() => setEditPerfil(p.key)}
+                      >
+                        <Text style={[styles.pickerText, editPerfil === p.key && styles.pickerTextActive]}>
+                          {p.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </>
               )}

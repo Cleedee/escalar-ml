@@ -81,13 +81,18 @@ export default function HelpScreen({ navigation }: any) {
               <Text style={[styles.tableCell, styles.colPerfil, { color: theme.colors.danger }]}>Agressivo</Text>
               <Text style={[styles.tableCell, styles.colDesc]}>Busca atletas com alto teto (grande potencial de pontuar acima da média). Dá desconto para atletas muito escalados (diferencial).</Text>
             </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, styles.colPerfil, { color: theme.colors.accent }]}>Upside</Text>
+              <Text style={[styles.tableCell, styles.colDesc]}>Prioriza atletas com maior upside_score: quem costuma explodir (p90 alto) e pontua 8+ ou 10+ com frequência, mesmo que a média seja modesta.</Text>
+            </View>
           </View>
 
           <Text style={styles.subsectionTitle}>Na prática</Text>
           <Text style={styles.body}>
             • <Text style={styles.bold}>Conservador:</Text> você quer segurança. Escolhe jogadores que já provaram consistência, mesmo que o teto seja menor. Ideal para proteger liderança.{'\n'}
             • <Text style={styles.bold}>Neutro:</Text> sem preferência de risco. O otimizador apenas aplica um desconto para jogadores que jogam pouco.{'\n'}
-            • <Text style={styles.bold}>Agressivo:</Text> você quer arriscar. Busca atletas com alto potencial de surpreender, mesmo que inconsistentes. Dá menos peso à popularidade. Ideal para buscar recuperação no ranking.
+            • <Text style={styles.bold}>Agressivo:</Text> você quer arriscar. Busca atletas com alto potencial de surpreender, mesmo que inconsistentes. Dá menos peso à popularidade. Ideal para buscar recuperação no ranking.{'\n'}
+            • <Text style={styles.bold}>Upside:</Text> orientado a dados históricos de explosão. Dá preferência a quem costuma ir muito além da média própria — o perfil para quem precisa de pontuação alta em uma rodada decisiva.
           </Text>
         </Card>
 

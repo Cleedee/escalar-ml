@@ -1,5 +1,5 @@
 import { API_BASE } from '../config';
-import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, ModeloInfo, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, HealthResponse, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse } from '../types';
+import { AtletasResponse, BotEscalarRequest, BotEscalarResponse, CartolaTeamResponse, MarketStatus, MercadoResponse, ModeloInfo, PartidasResponse, ProjetarRequest, ProjetarResponse, ResultadoResponse, TeamDetailResponse, TeamSearchResult, HealthResponse, JustificarResponse, OtimizarParams, OtimizarResponse, PontuadosResponse, UpsideResponse } from '../types';
 
 const RETRYABLE_CODES = new Set([502, 503, 504]);
 
@@ -68,6 +68,21 @@ export async function postOtimizar(params: OtimizarParams): Promise<OtimizarResp
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function fetchUpside(params?: {
+  posicao?: string;
+  top?: number;
+  min_jogos?: number;
+}): Promise<UpsideResponse> {
+  const search = new URLSearchParams();
+  if (params?.posicao) search.set('posicao', params.posicao);
+  if (params?.top) search.set('top', String(params.top));
+  if (params?.min_jogos) search.set('min_jogos', String(params.min_jogos));
+  const qs = search.toString();
+  const res = await fetch(`${API_BASE}/upside${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

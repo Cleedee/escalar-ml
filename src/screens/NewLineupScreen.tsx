@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CartolaAthlete, FORMACOES, Lineup, OtimizarParams } from '../types';
+import { CartolaAthlete, FORMACOES, Lineup, OtimizarParams, Perfil } from '../types';
 import { fetchMercado, fetchClubes, postOtimizar } from '../services/api';
 import { saveLineup } from '../services/storage';
 import { theme } from '../theme';
@@ -48,7 +48,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [nome, setNome] = useState(route.params?.nome ?? `Rodada ${rodada}`);
   const [orcamento, setOrcamento] = useState(route.params?.orcamento ?? '100');
   const [formacao, setFormacao] = useState(route.params?.formacao ?? 'auto');
-  const [perfil, setPerfil] = useState<'neutro' | 'agressivo' | 'conservador'>(route.params?.perfil ?? 'neutro');
+  const [perfil, setPerfil] = useState<Perfil>(route.params?.perfil ?? 'neutro');
   const [foco, setFoco] = useState(route.params?.foco ?? 1.0);
   const [incluirDuvidosos, setIncluirDuvidosos] = useState(route.params?.incluir_duvidosos ?? false);
   const [reservaLuxo, setReservaLuxo] = useState(route.params?.reserva_luxo ?? true);
@@ -222,7 +222,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
             }
           />
           <View style={styles.pickerRow}>
-            {(['neutro', 'agressivo', 'conservador'] as const).map((p) => (
+            {(['neutro', 'agressivo', 'conservador', 'upside'] as const).map((p) => (
               <TouchableOpacity
                 key={p}
                 style={[styles.pickerItem, perfil === p && styles.pickerActive]}
@@ -234,7 +234,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
                     perfil === p && styles.pickerTextActive,
                   ]}
                 >
-                  {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : 'Conservador'}
+                  {p === 'neutro' ? 'Neutro' : p === 'agressivo' ? 'Agressivo' : p === 'conservador' ? 'Conservador' : 'Upside'}
                 </Text>
               </TouchableOpacity>
             ))}
