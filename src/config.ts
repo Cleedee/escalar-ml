@@ -6,4 +6,4 @@ const ENV = {
 const env = __DEV__ ? 'dev' : 'prod';
 export const API_BASE = ENV[env].API_BASE;
 export const BUILD_DATE = '2026-07-23';
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.4.0';
