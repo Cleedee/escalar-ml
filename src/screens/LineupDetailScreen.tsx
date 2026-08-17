@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { CartolaAthlete, LineupEdit, Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
-import { deleteLineup, getLeagues, saveLeague, saveLineup } from '../services/storage';
+import {
+  CartolaAthlete,
+  Lineup,
+  LineupEdit,
+  OtimizarResponse,
+  Player,
+  PontuadoAthlete,
+  Reserva,
+  SubstituicaoResult,
+  Team,
+  PartidasResponse,
+} from '../types';
+import { deleteLineup, getLeagues, getLineupsByRodada, saveLeague, saveLineup } from '../services/storage';
 import { fetchClubes, fetchPontuados, fetchPartidas, postProjetar } from '../services/api';
 import { calcularSubstituicoes } from '../services/substituicaoEngine';
+import { importCartolaLineup } from '../services/cartola';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -25,6 +37,16 @@ const posicoes: Record<string, string> = {
   ATA: 'Atacante',
   TEC: 'Técnico',
 };
+
+const MAX_VERSIONS = 10;
+
+/** Empurra um snapshot do response atual para o histórico de versões (máx. 10). */
+function pushVersion(lineup: Lineup, response: OtimizarResponse): OtimizarResponse[] {
+  const versions = [...(lineup.versions ?? [])];
+  versions.push(JSON.parse(JSON.stringify(response)));
+  while (versions.length > MAX_VERSIONS) versions.shift();
+  return versions;
+}
 
 const SOURCE_LABELS: Record<string, string> = {
   otimizar: 'Gerado pelo otimizador',
@@ -81,6 +103,15 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [swapPrecoSaindo, setSwapPrecoSaindo] = useState(0);
   const [swapTipo, setSwapTipo] = useState<'titular' | 'reserva'>('titular');
 
+  // ── Rival comparison (Fase 4.1) ──
+  const [rivalInfo, setRivalInfo] = useState<{
+    ligaNome: string;
+    meuPosicao: number;
+    rivales: Array<{ team: Team; direcao: 'acima' | 'abaixo'; lineup?: Lineup }>;
+  } | null>(null);
+  const [rivalRefresh, setRivalRefresh] = useState(0);
+  const [importandoRival, setImportandoRival] = useState(false);
+
   useEffect(() => {
     fetchClubes()
       .then((clubes) => {
@@ -90,6 +121,39 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       })
       .catch(() => {});
   }, []);
+
+  // ── Rival comparison (Fase 4.1) ──
+  useEffect(() => {
+    if (!lineup.atribuido_a_team_id) { setRivalInfo(null); return; }
+    let cancelled = false;
+    (async () => {
+      const leagues = await getLeagues();
+      if (cancelled) return;
+      for (const liga of leagues) {
+        const teamIdx = liga.times.findIndex((t) => t.id === lineup.atribuido_a_team_id);
+        if (teamIdx === -1) continue;
+        const sorted = [...liga.times].sort((a, b) =>
+          liga.modalidade === 'patrimonio'
+            ? b.patrimonio - a.patrimonio
+            : b.total_acumulado - a.total_acumulado,
+        );
+        const pos = sorted.findIndex((t) => t.id === lineup.atribuido_a_team_id);
+        const rivales: Array<{ team: Team; direcao: 'acima' | 'abaixo' }> = [];
+        if (pos > 0) rivales.push({ team: sorted[pos - 1], direcao: 'acima' });
+        if (pos < sorted.length - 1) rivales.push({ team: sorted[pos + 1], direcao: 'abaixo' });
+
+        const lineupsRodada = await getLineupsByRodada(lineup.rodada);
+        if (cancelled) return;
+        const mapped = rivales.map((r) => ({
+          ...r,
+          lineup: lineupsRodada.find((l) => l.atribuido_a_team_id === r.team.id),
+        }));
+        setRivalInfo({ ligaNome: liga.nome, meuPosicao: pos + 1, rivales: mapped });
+        break;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [lineup.id, lineup.atribuido_a_team_id, lineup.rodada, rivalRefresh]);
 
   // ── Swap modal handlers ──
   const openSwap = (posicao: string, apelido: string, preco: number, tipo: 'titular' | 'reserva') => {
@@ -102,6 +166,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
   const handleSwapConfirm = async (athlete: CartolaAthlete) => {
     setSwapVisible(false);
+    const versions = pushVersion(lineup, response);
     const edit: LineupEdit = {
       tipo: 'swap',
       ts: Date.now(),
@@ -175,7 +240,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
     const updatedResponse = { ...response, players: novosPlayers, reservas: novasReservas };
     const edits = [...(lineup.edits ?? []), edit];
-    const newLineup = { ...lineup, response: updatedResponse, edits, source: lineup.source ?? 'manual' as const };
+    const newLineup = { ...lineup, response: updatedResponse, edits, versions, source: lineup.source ?? 'manual' as const };
 
     try {
       const enriched = await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada);
@@ -196,6 +261,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         {
           text: 'Confirmar',
           onPress: async () => {
+            const versions = pushVersion(lineup, response);
             const antigoCapId = response.players.find((p) => p.role === 'capitao')?.atleta_id;
             const novosPlayers = response.players.map((p) => ({
               ...p,
@@ -210,7 +276,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
             const updatedResponse = { ...response, players: novosPlayers };
             const edits = [...(lineup.edits ?? []), edit];
-            const newLineup = { ...lineup, response: updatedResponse, edits, source: 'manual' as const };
+            const newLineup = { ...lineup, response: updatedResponse, edits, versions, source: 'manual' as const };
 
             try {
               const enriched = await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada);
@@ -231,6 +297,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     if (edits.length === 0) return;
     const last = edits[edits.length - 1];
     const restante = edits.slice(0, -1);
+    const versions = [...(lineup.versions ?? [])];
+    versions.pop(); // remove the snapshot that corresponded to this edit
 
     if (last.tipo === 'swap' && last.jogador_removido && last.jogador_adicionado) {
       const removido = last.jogador_removido;
@@ -273,7 +341,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       }
 
       const updatedResponse = { ...response, players: novosPlayers, reservas: novasReservas };
-      const newLineup = { ...lineup, response: updatedResponse, edits: restante };
+      const newLineup = { ...lineup, response: updatedResponse, edits: restante, versions };
       try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
       await saveLineup(newLineup);
       navigation.replace('LineupDetail', { lineup: newLineup, league });
@@ -284,7 +352,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           : p.atleta_id === last.capitao_anterior_id ? 'capitao' as const : p.role) as 'capitao' | undefined,
       }));
       const updatedResponse = { ...response, players: novosPlayers };
-      const newLineup = { ...lineup, response: updatedResponse, edits: restante };
+      const newLineup = { ...lineup, response: updatedResponse, edits: restante, versions };
       try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
       await saveLineup(newLineup);
       navigation.replace('LineupDetail', { lineup: newLineup, league });
@@ -295,9 +363,10 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const handleProjetar = async () => {
     setProjetando(true);
     try {
+      const versions = pushVersion(lineup, response);
       const enriched = await projetarPlayers(response.players, response.tecnico, lineup.rodada);
       const updatedResponse = { ...response, ...enriched };
-      const updatedLineup = { ...lineup, response: updatedResponse };
+      const updatedLineup = { ...lineup, response: updatedResponse, versions };
       await saveLineup(updatedLineup);
       navigation.replace('LineupDetail', { lineup: updatedLineup, league });
     } catch {
@@ -313,6 +382,46 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     handleVoltar();
   };
 
+  // ── Restore version (Fase 4.2) ──
+  const handleRestoreVersion = async (index: number) => {
+    const versions = lineup.versions ?? [];
+    const target = versions[index];
+    if (!target) return;
+    const novasVersions = versions.slice(0, index);
+    // Restaura a estrutura; marca como editada manualmente (nunca reescreve pontuações reais).
+    const newLineup = {
+      ...lineup,
+      response: JSON.parse(JSON.stringify(target)),
+      versions: novasVersions,
+      source: 'manual' as const,
+      projetado: true,
+    };
+    await saveLineup(newLineup);
+    navigation.replace('LineupDetail', { lineup: newLineup, league });
+  };
+
+  // ── Import rival lineup (Fase 4.1) ──
+  const handleImportRival = async (team: Team) => {
+    if (!team.time_id) {
+      Alert.alert('Sem time_id', 'Este time não possui time_id do Cartola para importar.');
+      return;
+    }
+    setImportandoRival(true);
+    try {
+      const lineupRival = await importCartolaLineup(team.time_id, lineup.rodada, {
+        atribuido_a_team_id: team.id,
+        nome: `${team.nome} (R${lineup.rodada})`,
+      });
+      await saveLineup(lineupRival);
+      setRivalRefresh((k) => k + 1);
+      Alert.alert('Importado', `Escalação de ${team.nome} importada e projetada.`);
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message || 'Não foi possível importar a escalação do rival.');
+    } finally {
+      setImportandoRival(false);
+    }
+  };
+
   const handleExportJson = async () => {
     const payload = {
       ...response,
@@ -320,6 +429,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       nome: lineup.nome,
       rodada: lineup.rodada,
       edits: lineup.edits,
+      versions: lineup.versions,
       source: lineup.source,
     };
     try {
@@ -410,6 +520,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     if (!substituicaoResult) return;
     setSalvandoSubstituicao(true);
     try {
+      const versions = pushVersion(lineup, response);
       const novosPlayers = [...response.players];
       const novasReservas = { ...response.reservas };
 
@@ -447,6 +558,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       };
       const updatedLineup = {
         ...lineup,
+        versions,
         params: lineup.params ? { ...lineup.params, orcamento: novoOrcamento } : undefined,
         response: updatedResponse,
       };
@@ -598,6 +710,91 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               </Text>
             </View>
           )}
+        </Card>
+      )}
+
+      {rivalInfo && (
+        <Card style={styles.rivalCard}>
+          <SectionHeader
+            label={`Duelo · ${rivalInfo.ligaNome}`}
+            action={
+              <Text style={styles.rivalPos}>{rivalInfo.meuPosicao}º</Text>
+            }
+          />
+          {importandoRival && (
+            <View style={styles.rivalImporting}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={styles.rivalImportingText}>Importando escalação do rival...</Text>
+            </View>
+          )}
+          {rivalInfo.rivales.map((r) => {
+            const meuPts = response.pontos_previstos;
+            const rivalPts = r.lineup?.response?.pontos_previstos ?? null;
+            const dif = rivalPts != null ? meuPts - rivalPts : null;
+            return (
+              <View key={r.team.id} style={styles.rivalRow}>
+                <View style={styles.rivalInfo}>
+                  <Text style={styles.rivalName}>
+                    {r.direcao === 'acima' ? '⬆ ' : '⬇ '}{r.team.nome}
+                  </Text>
+                  <Text style={styles.rivalDetail}>
+                    {r.team.proprietario}
+                    {r.lineup?.response?.orcamento_usado != null
+                      ? ` · C$ ${r.lineup.response.orcamento_usado.toFixed(2)}`
+                      : ''}
+                  </Text>
+                </View>
+                <View style={styles.rivalRight}>
+                  {rivalPts != null ? (
+                    <>
+                      <Text style={[styles.rivalPts, dif != null && dif >= 0 ? styles.rivalPtsWin : styles.rivalPtsLose]}>
+                        {rivalPts.toFixed(1)} pts
+                      </Text>
+                      <Text style={styles.rivalDiff}>
+                        {dif != null ? (dif >= 0 ? `+${dif.toFixed(1)}` : dif.toFixed(1)) : ''} vs você
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.rivalPtsPlaceholder}>sem escalação</Text>
+                      <TouchableOpacity
+                        style={styles.rivalImportBtn}
+                        onPress={() => handleImportRival(r.team)}
+                        disabled={importandoRival}
+                      >
+                        <Text style={styles.rivalImportBtnText}>📥 Importar</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      {lineup.versions && lineup.versions.length > 0 && (
+        <Card style={styles.editHistoryCard}>
+          <Text style={styles.paramsTitle}>Versões anteriores</Text>
+          {lineup.versions.map((v: OtimizarResponse, i: number) => (
+            <View key={i} style={styles.versionRow}>
+              <View style={styles.versionInfo}>
+                <Text style={styles.versionText}>
+                  v{lineup.versions!.length - i} · {v.formacao} · {v.pontos_previstos != null ? v.pontos_previstos.toFixed(1) : '—'} pts
+                </Text>
+                <Text style={styles.versionDetail}>
+                  C$ {v.orcamento_usado != null ? v.orcamento_usado.toFixed(2) : '—'}
+                  {v.valorizacao_total != null ? ` · Val ${v.valorizacao_total >= 0 ? '+' : ''}C$ ${v.valorizacao_total.toFixed(2)}` : ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.restoreBtn}
+                onPress={() => handleRestoreVersion(i)}
+              >
+                <Text style={styles.restoreBtnText}>↩ Restaurar</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </Card>
       )}
 
@@ -967,4 +1164,115 @@ const styles = StyleSheet.create({
   viewToggleText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textMuted, fontWeight: theme.fontWeight.medium, letterSpacing: theme.letterSpacing.wide },
   viewToggleTextActive: { color: theme.colors.primary, fontWeight: theme.fontWeight.semibold },
   bottomButtons: { flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.lg },
+  // ── Rival comparison (Fase 4.1) ──
+  rivalCard: { marginBottom: theme.spacing.md },
+  rivalPos: {
+    fontFamily: theme.fonts.heading,
+    fontSize: theme.fontSize.lg,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.bold,
+  },
+  rivalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  rivalInfo: { flex: 1 },
+  rivalName: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  rivalDetail: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  rivalRight: { alignItems: 'flex-end', marginLeft: theme.spacing.md },
+  rivalPts: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.bold,
+  },
+  rivalPtsWin: { color: theme.colors.primary },
+  rivalPtsLose: { color: theme.colors.danger },
+  rivalDiff: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  rivalPtsPlaceholder: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.xs,
+  },
+  rivalImportBtn: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryGlow,
+  },
+  rivalImportBtnText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  rivalImporting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  rivalImportingText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  // ── Versões (Fase 4.2) ──
+  versionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+  },
+  versionInfo: { flex: 1 },
+  versionText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  versionDetail: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.xs,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  restoreBtn: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.info,
+    backgroundColor: theme.colors.infoGlow,
+    marginLeft: theme.spacing.md,
+  },
+  restoreBtnText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.info,
+    fontWeight: theme.fontWeight.semibold,
+  },
 });

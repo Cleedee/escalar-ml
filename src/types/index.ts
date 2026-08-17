@@ -112,6 +112,8 @@ export interface Lineup {
   projetado?: boolean;
   mercado_snapshot?: { status_mercado: number; rodada_atual: number; ts: number };
   edits?: LineupEdit[];
+  /** Snapshots do response anteriores às edições (Fase 4.2 — máx. 10) */
+  versions?: OtimizarResponse[];
 }
 
 export interface LineupEdit {
