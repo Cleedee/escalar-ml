@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,9 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CartolaAthlete, FORMACOES, Lineup, OtimizarParams, Perfil } from '../types';
-import { fetchMercado, fetchClubes, postOtimizar } from '../services/api';
-import { saveLineup } from '../services/storage';
+import { CartolaAthlete, FORMACOES, League, Lineup, OtimizarParams, Perfil, STATUS_MAP } from '../types';
+import { fetchClubes, fetchMercado, fetchStatus, postOtimizar } from '../services/api';
+import { getLeagues, saveLineup } from '../services/storage';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -31,6 +31,37 @@ function labelFoco(v: number): string {
   if (v === 0.3) return '↑ Valorização';
   if (v === 0.0) return 'Só Valorização';
   return v.toFixed(1);
+}
+
+const PERFIL_DESC: Record<string, string> = {
+  neutro: 'Equilíbrio entre pontuação e valorização.',
+  agressivo: 'Busca upside: assume mais risco por pontos altos.',
+  conservador: 'Prefere atletas com alta chance de jogar.',
+  upside: 'Alto risco, alto retorno: atletas de picos altos.',
+};
+
+function parseIds(text: string): number[] {
+  return text.trim() ? text.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)) : [];
+}
+
+/** Custo do time mais barato possível do mercado: 1 GOL + 2 def + 2 MEI + 1 ATA + 1 TEC. */
+function calcOrcamentoMinimo(atletas: CartolaAthlete[]): number | null {
+  if (atletas.length === 0) return null;
+  const byPos = (pos: number) =>
+    atletas.filter((a) => a.posicao_id === pos).sort((a, b) => a.preco_num - b.preco_num);
+  const gol = byPos(1)[0];
+  const defs = [...byPos(2), ...byPos(3)].sort((a, b) => a.preco_num - b.preco_num).slice(0, 2);
+  const meis = byPos(4).slice(0, 2);
+  const ata = byPos(5)[0];
+  const tec = byPos(6)[0];
+  if (!gol || defs.length < 2 || meis.length < 2 || !ata || !tec) return null;
+  return (
+    gol.preco_num +
+    defs.reduce((s, a) => s + a.preco_num, 0) +
+    meis.reduce((s, a) => s + a.preco_num, 0) +
+    ata.preco_num +
+    tec.preco_num
+  );
 }
 
 const POS_MAP: Record<number, string> = {
@@ -63,6 +94,11 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [showSearch, setShowSearch] = useState(false);
   const [searchTarget, setSearchTarget] = useState<'obrigar' | 'excluir'>('obrigar');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusMercado, setStatusMercado] = useState<number>(1);
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [atribuidoTeamId, setAtribuidoTeamId] = useState<string | undefined>(undefined);
+  const [showAtribuir, setShowAtribuir] = useState(false);
+  const [expandedLiga, setExpandedLiga] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([fetchMercado(), fetchClubes()])
@@ -75,6 +111,10 @@ export default function NewLineupScreen({ route, navigation }: any) {
         setClubeMap(map);
       })
       .catch(() => {});
+    fetchStatus()
+      .then((s) => setStatusMercado(s.status_mercado))
+      .catch(() => {});
+    getLeagues().then(setLeagues).catch(() => {});
   }, []);
 
   const openSearch = useCallback((target: 'obrigar' | 'excluir') => {
@@ -86,14 +126,14 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const selectAthlete = useCallback((athlete: CartolaAthlete) => {
     const idStr = String(athlete.atleta_id);
     if (searchTarget === 'obrigar') {
-      setObrigarText((prev) => {
-        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+      setObrigarText((prev: string) => {
+        const ids = prev ? prev.split(',').map((s: string) => s.trim()) : [];
         if (ids.includes(idStr)) return prev;
         return prev ? `${prev}, ${idStr}` : idStr;
       });
     } else {
-      setExcluirText((prev) => {
-        const ids = prev ? prev.split(',').map(s => s.trim()) : [];
+      setExcluirText((prev: string) => {
+        const ids = prev ? prev.split(',').map((s: string) => s.trim()) : [];
         if (ids.includes(idStr)) return prev;
         return prev ? `${prev}, ${idStr}` : idStr;
       });
@@ -107,6 +147,19 @@ export default function NewLineupScreen({ route, navigation }: any) {
       ).slice(0, 30)
     : mercadoAtletas.slice(0, 30);
 
+  const mercadoIds = useMemo(() => new Set(mercadoAtletas.map((a) => a.atleta_id)), [mercadoAtletas]);
+  const minOrcamento = useMemo(() => calcOrcamentoMinimo(mercadoAtletas), [mercadoAtletas]);
+  const invalidObrigar = useMemo(() => parseIds(obrigarText).filter((id) => !mercadoIds.has(id)), [obrigarText, mercadoIds]);
+  const invalidExcluir = useMemo(() => parseIds(excluirText).filter((id) => !mercadoIds.has(id)), [excluirText, mercadoIds]);
+  const atribuido = useMemo(() => {
+    for (const liga of leagues) {
+      const t = liga.times.find((tm) => tm.id === atribuidoTeamId);
+      if (t) return { team: t.nome, league: liga.nome };
+    }
+    return null;
+  }, [leagues, atribuidoTeamId]);
+  const mercadoFechado = statusMercado !== 1;
+
   async function handleGenerate() {
     const budget = parseFloat(orcamento);
     if (isNaN(budget) || budget <= 0) {
@@ -117,9 +170,24 @@ export default function NewLineupScreen({ route, navigation }: any) {
       Alert.alert('Erro', 'Informe um nome para a escalação');
       return;
     }
+    if (minOrcamento !== null && budget < minOrcamento) {
+      Alert.alert(
+        'Orçamento baixo',
+        `Com C$ ${budget.toFixed(2)} fica difícil montar um time completo: o time mínimo do mercado custa C$ ${minOrcamento.toFixed(2)} (1 GOL + 2 def + 2 MEI + 1 ATA + 1 técnico). Ajuste o orçamento.`,
+      );
+      return;
+    }
+    const invalidIds = [...invalidObrigar, ...invalidExcluir];
+    if (invalidIds.length > 0) {
+      Alert.alert(
+        'IDs inválidos',
+        `Estes IDs não existem no mercado atual: ${invalidIds.join(', ')}. Use a busca (🔍) para selecionar atletas válidos.`,
+      );
+      return;
+    }
 
-    const obrigar = obrigarText.trim() ? obrigarText.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) : undefined;
-    const excluir = excluirText.trim() ? excluirText.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n)) : undefined;
+    const obrigar = parseIds(obrigarText);
+    const excluir = parseIds(excluirText);
 
     const params: OtimizarParams = {
       orcamento: budget,
@@ -149,6 +217,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         nome: nome.trim(),
         rodada,
+        ...(atribuidoTeamId ? { atribuido_a_team_id: atribuidoTeamId } : {}),
         created_at: new Date().toISOString(),
         params,
         response,
@@ -173,6 +242,22 @@ export default function NewLineupScreen({ route, navigation }: any) {
         <Text style={styles.title}>Nova Escalação</Text>
         <Text style={styles.subtitle}>Rodada {rodada}</Text>
 
+        {mercadoFechado && (
+          <Card style={styles.marketBanner}>
+            <View style={styles.marketBannerRow}>
+              <Text style={styles.marketBannerIcon}>⚠️</Text>
+              <View style={styles.marketBannerBody}>
+                <Text style={styles.marketBannerTitle}>Mercado fechado</Text>
+                <Text style={styles.marketBannerText}>
+                  {STATUS_MAP[statusMercado]?.label ?? 'Status desconhecido'} — as projeções usam o
+                  último snapshot (preços congelados no fechamento). Você ainda pode gerar, importar
+                  do Cartola ou editar escalações existentes.
+                </Text>
+              </View>
+            </View>
+          </Card>
+        )}
+
         <Card>
           <SectionHeader label="Nome" />
           <TextInput
@@ -190,6 +275,26 @@ export default function NewLineupScreen({ route, navigation }: any) {
             keyboardType="decimal-pad"
             placeholderTextColor={theme.colors.textMuted}
           />
+          {minOrcamento !== null && (
+            <Text style={styles.hintText}>
+              Time mínimo do mercado: C$ {minOrcamento.toFixed(2)} (1 GOL + 2 def + 2 MEI + 1 ATA + técnico)
+            </Text>
+          )}
+        </Card>
+
+        <Card>
+          <SectionHeader label="Atribuir a time da liga (opcional)" />
+          <TouchableOpacity style={styles.atribuirBtn} onPress={() => setShowAtribuir(true)}>
+            <Text style={[styles.atribuirBtnText, atribuido ? undefined : styles.atribuirBtnTextEmpty]}>
+              {atribuido ? `${atribuido.team} · ${atribuido.league}` : 'Nenhum time selecionado'}
+            </Text>
+            <Text style={styles.atribuirBtnAction}>{atribuido ? 'Alterar' : 'Selecionar'}</Text>
+          </TouchableOpacity>
+          {atribuido && (
+            <TouchableOpacity onPress={() => setAtribuidoTeamId(undefined)}>
+              <Text style={styles.atribuirRemover}>Remover atribuição</Text>
+            </TouchableOpacity>
+          )}
         </Card>
 
         <Card>
@@ -221,6 +326,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
               </TouchableOpacity>
             }
           />
+          <Text style={styles.hintText}>{PERFIL_DESC[perfil] ?? ''}</Text>
           <View style={styles.pickerRow}>
             {(['neutro', 'agressivo', 'conservador', 'upside'] as const).map((p) => (
               <TouchableOpacity
@@ -249,6 +355,9 @@ export default function NewLineupScreen({ route, navigation }: any) {
             }
           />
           <Text style={styles.focoHint}>{labelFoco(foco)}</Text>
+          <Text style={styles.hintText}>
+            Quanto maior o foco, mais o otimizador prioriza pontuação; menor, prioriza valorização (0–1).
+          </Text>
           <View style={styles.pickerRow}>
             {FOCOS.map((v) => (
               <TouchableOpacity
@@ -295,7 +404,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           <SectionHeader label="Obrigar atletas" />
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, styles.inputFlex]}
+              style={[styles.input, styles.inputFlex, invalidObrigar.length > 0 && styles.inputInvalid]}
               value={obrigarText}
               onChangeText={setObrigarText}
               placeholder="IDs separados por vírgula"
@@ -305,11 +414,16 @@ export default function NewLineupScreen({ route, navigation }: any) {
               <Text style={styles.searchBtnText}>🔍</Text>
             </TouchableOpacity>
           </View>
+          {invalidObrigar.length > 0 && (
+            <Text style={styles.invalidText}>
+              IDs inexistentes no mercado: {invalidObrigar.join(', ')}
+            </Text>
+          )}
 
           <SectionHeader label="Excluir atletas" />
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, styles.inputFlex]}
+              style={[styles.input, styles.inputFlex, invalidExcluir.length > 0 && styles.inputInvalid]}
               value={excluirText}
               onChangeText={setExcluirText}
               placeholder="IDs separados por vírgula"
@@ -319,6 +433,11 @@ export default function NewLineupScreen({ route, navigation }: any) {
               <Text style={styles.searchBtnText}>🔍</Text>
             </TouchableOpacity>
           </View>
+          {invalidExcluir.length > 0 && (
+            <Text style={styles.invalidText}>
+              IDs inexistentes no mercado: {invalidExcluir.join(', ')}
+            </Text>
+          )}
         </Card>
 
         {loading ? (
@@ -338,6 +457,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           <Text style={styles.errorMsg}>{error}</Text>
         )}
 
+        <Button variant="outline" label="✏ Montar na mão" onPress={() => navigation.navigate('Draft', { rodada })} />
         <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
       </ScrollView>
 
@@ -378,6 +498,53 @@ export default function NewLineupScreen({ route, navigation }: any) {
                     </View>
                     <Text style={styles.modalItemId}>#{a.atleta_id}</Text>
                   </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showAtribuir} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Atribuir escalação a um time</Text>
+              <TouchableOpacity onPress={() => setShowAtribuir(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalList}>
+              {leagues.length === 0 ? (
+                <Text style={styles.modalEmpty}>
+                  Nenhuma liga cadastrada. Crie uma liga na aba Ligas.
+                </Text>
+              ) : (
+                leagues.map((liga) => (
+                  <View key={liga.id}>
+                    <TouchableOpacity
+                      style={styles.ligaRow}
+                      onPress={() => setExpandedLiga(expandedLiga === liga.id ? null : liga.id)}
+                    >
+                      <Text style={styles.ligaNome}>{liga.nome}</Text>
+                      <Text style={styles.ligaArrow}>{expandedLiga === liga.id ? '▾' : '▸'}</Text>
+                    </TouchableOpacity>
+                    {expandedLiga === liga.id &&
+                      liga.times.map((time) => (
+                        <TouchableOpacity
+                          key={time.id}
+                          style={styles.timeRow}
+                          onPress={() => {
+                            setAtribuidoTeamId(time.id);
+                            setShowAtribuir(false);
+                            setExpandedLiga(null);
+                          }}
+                        >
+                          <Text style={styles.timeNome}>{time.nome}</Text>
+                          <Text style={styles.timeProp}>{time.proprietario}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 ))
               )}
             </ScrollView>
@@ -616,5 +783,120 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginLeft: theme.spacing.sm,
+  },
+  marketBanner: {
+    borderColor: theme.colors.warning,
+    borderWidth: 1,
+    marginBottom: theme.spacing.lg,
+  },
+  marketBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
+  },
+  marketBannerIcon: {
+    fontSize: theme.fontSize.xl,
+  },
+  marketBannerBody: {
+    flex: 1,
+  },
+  marketBannerTitle: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    fontWeight: theme.fontWeight.bold,
+    color: theme.colors.warning,
+    marginBottom: 2,
+  },
+  marketBannerText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.spacing.xl,
+  },
+  hintText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    marginBottom: 6,
+  },
+  invalidText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.danger,
+    marginTop: theme.spacing.xs,
+  },
+  inputInvalid: {
+    borderColor: theme.colors.danger,
+  },
+  atribuirBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  atribuirBtnText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    flex: 1,
+  },
+  atribuirBtnTextEmpty: {
+    color: theme.colors.textMuted,
+  },
+  atribuirBtnAction: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  atribuirRemover: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    textDecorationLine: 'underline',
+    marginTop: theme.spacing.sm,
+    alignSelf: 'flex-end',
+  },
+  ligaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  ligaNome: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  ligaArrow: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textMuted,
+  },
+  timeRow: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surface,
+  },
+  timeNome: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.primary,
+  },
+  timeProp: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    marginTop: 2,
   },
 });

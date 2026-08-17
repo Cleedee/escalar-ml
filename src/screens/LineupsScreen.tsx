@@ -1,16 +1,22 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { API_BASE } from '../config';
-import { fetchStatus } from '../services/api';
-import { getLeagues, getLineupsByRodada } from '../services/storage';
+import { fetchStatus, fetchTeams } from '../services/api';
+import { getLeagues, getLineupsByRodada, saveLineup } from '../services/storage';
+import { importCartolaLineup } from '../services/cartola';
+import { League, Lineup, STATUS_MAP, TeamSearchResult } from '../types';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -22,9 +28,17 @@ export default function LineupsScreen({ navigation }: any) {
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const [rodada, setRodada] = useState<number>(17);
   const [rodadaAtual, setRodadaAtual] = useState<number>(17);
+  const [statusMercado, setStatusMercado] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [leagues, setLeagues] = useState<League[]>([]);
+
+  const [showImport, setShowImport] = useState(false);
+  const [teamQuery, setTeamQuery] = useState('');
+  const [teamResults, setTeamResults] = useState<TeamSearchResult[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const teamTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const teamLookup: Record<string, { team: string; league: string }> = {};
   for (const liga of leagues) {
@@ -39,6 +53,7 @@ export default function LineupsScreen({ navigation }: any) {
         .then((s) => {
           setRodadaAtual(s.rodada_atual);
           setRodada(s.rodada_atual);
+          setStatusMercado(s.status_mercado);
         })
         .catch(() => {});
       setRefreshKey((k) => k + 1);
@@ -69,9 +84,56 @@ export default function LineupsScreen({ navigation }: any) {
     if (nova >= 1 && nova <= rodadaAtual + 5) setRodada(nova);
   };
 
+  const handleTeamQuery = (text: string) => {
+    setTeamQuery(text);
+    if (teamTimer.current) clearTimeout(teamTimer.current);
+    if (!text.trim()) {
+      setTeamResults([]);
+      return;
+    }
+    teamTimer.current = setTimeout(() => {
+      setTeamLoading(true);
+      fetchTeams(text.trim())
+        .then(setTeamResults)
+        .catch(() => setTeamResults([]))
+        .finally(() => setTeamLoading(false));
+    }, 400);
+  };
+
+  const handleSelectTeam = async (team: TeamSearchResult) => {
+    setShowImport(false);
+    setTeamQuery('');
+    setTeamResults([]);
+    setImporting(true);
+    try {
+      const lineup = await importCartolaLineup(team.time_id, rodada);
+      await saveLineup(lineup);
+      setRefreshKey((k) => k + 1);
+      navigation.navigate('LineupDetail', { lineup });
+    } catch (e: any) {
+      Alert.alert('Erro', e?.message || 'Não foi possível importar a escalação do time.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const marketBadgeVariant = (() => {
+    if (statusMercado === 1) return 'primary' as const;
+    if (statusMercado === 2) return 'warning' as const;
+    if (statusMercado === 3) return 'info' as const;
+    return 'neutral' as const;
+  })();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.marketRow}>
+          <Badge
+            variant={marketBadgeVariant}
+            size="md"
+            label={STATUS_MAP[statusMercado]?.label ?? 'Mercado —'}
+          />
+        </View>
         <View style={styles.rodadaRow}>
           <TouchableOpacity onPress={() => changeRodada(-1)} style={styles.arrow}>
             <Text style={styles.arrowText}>{'<'}</Text>
@@ -90,7 +152,15 @@ export default function LineupsScreen({ navigation }: any) {
             <Text style={styles.atualBtnText}>Atual</Text>
           </TouchableOpacity>
         </View>
-        <Button variant="primary" label="+ Nova" onPress={() => navigation.navigate('NewLineup', { rodada })} />
+        <View style={styles.actionsRow}>
+          <Button
+            variant="outline"
+            label="📥 Importar do Cartola"
+            onPress={() => setShowImport(true)}
+          />
+          <Button variant="primary" label="+ Nova" onPress={() => navigation.navigate('NewLineup', { rodada })} />
+          <Button variant="outline" label="✏ Montar na mão" onPress={() => navigation.navigate('Draft', { rodada })} />
+        </View>
       </View>
 
       {loading ? (
@@ -161,6 +231,60 @@ export default function LineupsScreen({ navigation }: any) {
         </View>
         </View>
       )}
+
+      <Modal visible={showImport} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Importar do Cartola</Text>
+              <TouchableOpacity onPress={() => setShowImport(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalHint}>
+              Busque seu time do Cartola (o mesmo escalado no app oficial) e importe a escalação
+              atual para a rodada {rodada}. Funciona mesmo com o mercado fechado.
+            </Text>
+            <TextInput
+              style={styles.modalSearch}
+              value={teamQuery}
+              onChangeText={handleTeamQuery}
+              placeholder="Nome do time..."
+              placeholderTextColor={theme.colors.textMuted}
+              autoFocus
+            />
+            {teamLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 16 }} />
+            ) : teamResults.length > 0 ? (
+              <ScrollView style={styles.modalList}>
+                {teamResults.map((item) => (
+                  <TouchableOpacity
+                    key={item.time_id}
+                    style={styles.modalItem}
+                    onPress={() => handleSelectTeam(item)}
+                  >
+                    <View style={styles.modalItemLeft}>
+                      <Text style={styles.modalItemName}>{item.nome_cartola}</Text>
+                      <Text style={styles.modalItemDetail}>
+                        {item.nome} · ID {item.time_id}
+                      </Text>
+                    </View>
+                    <Text style={styles.modalItemArrow}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : teamQuery.trim() ? (
+              <Text style={styles.modalEmpty}>Nenhum time encontrado</Text>
+            ) : null}
+            {importing && (
+              <View style={styles.importingRow}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.importingText}>Importando e projetando...</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -177,6 +301,15 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
+  },
+  marketRow: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    justifyContent: 'center',
   },
   rodadaRow: {
     flexDirection: 'row',
@@ -314,5 +447,107 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    maxHeight: '80%',
+    padding: theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderBottomWidth: 0,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    fontFamily: theme.fonts.heading,
+    fontSize: theme.fontSize.lg,
+    color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
+  },
+  modalClose: {
+    fontSize: theme.fontSize.xl,
+    color: theme.colors.textSecondary,
+    padding: theme.spacing.xs,
+  },
+  modalHint: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+  },
+  modalSearch: {
+    backgroundColor: theme.colors.bg,
+    borderRadius: theme.borderRadius.md,
+    padding: 14,
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    marginBottom: theme.spacing.md,
+  },
+  modalList: {
+    maxHeight: 400,
+  },
+  modalEmpty: {
+    fontFamily: theme.fonts.body,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing['2xl'],
+    fontSize: theme.fontSize.base,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalItemLeft: {
+    flex: 1,
+  },
+  modalItemName: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.semibold,
+  },
+  modalItemDetail: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  modalItemArrow: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.lg,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.sm,
+  },
+  importingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.lg,
+  },
+  importingText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.base,
+    color: theme.colors.textSecondary,
   },
 });

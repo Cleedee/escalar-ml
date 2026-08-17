@@ -3,9 +3,9 @@ import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity,
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
+import { CartolaAthlete, LineupEdit, Player, PontuadoAthlete, Reserva, SubstituicaoResult, PartidasResponse } from '../types';
 import { deleteLineup, getLeagues, saveLeague, saveLineup } from '../services/storage';
-import { fetchPontuados, fetchPartidas, postProjetar } from '../services/api';
+import { fetchClubes, fetchPontuados, fetchPartidas, postProjetar } from '../services/api';
 import { calcularSubstituicoes } from '../services/substituicaoEngine';
 import { theme } from '../theme';
 import Card from '../components/Card';
@@ -13,6 +13,7 @@ import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 import SoccerField from '../components/SoccerField';
+import PlayerSwapModal from '../components/PlayerSwapModal';
 import { version as APP_VERSION } from '../../package.json';
 import usePageTitle from '../usePageTitle';
 
@@ -25,6 +26,41 @@ const posicoes: Record<string, string> = {
   TEC: 'Técnico',
 };
 
+const SOURCE_LABELS: Record<string, string> = {
+  otimizar: 'Gerado pelo otimizador',
+  import: 'Importado do Cartola',
+  draft: 'Montado na mão',
+  manual: 'Editado manualmente',
+};
+
+/** Re-projeta o time (titulares + técnico) e retorna o response atualizado. */
+async function projetarPlayers(
+  players: Player[],
+  tecnico: any,
+  rodada: number,
+) {
+  const capitaoId = players.find((p) => p.role === 'capitao')?.atleta_id;
+  const result = await postProjetar({
+    atletas: players.map((p) => p.atleta_id),
+    tecnico_id: tecnico?.atleta_id ?? 0,
+    capitao_id: capitaoId ?? 0,
+    rodada,
+    forcar: false,
+  });
+  const enrichedPlayers = players.map((p) => {
+    const enriched = ((result as any).jogadores ?? (result as any).players ?? []).find(
+      (j: any) => Number(j.atleta_id) === p.atleta_id,
+    );
+    return enriched ? { ...p, ...enriched, role: p.role } : p;
+  });
+  return {
+    pontos_previstos: result.pontos_previstos,
+    valorizacao_total: result.valorizacao_total,
+    players: enrichedPlayers,
+    tecnico: result.tecnico ?? tecnico,
+  };
+}
+
 export default function LineupDetailScreen({ route, navigation }: any) {
   usePageTitle('Escalação');
   const { lineup, league } = route.params;
@@ -36,37 +72,232 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [salvandoSubstituicao, setSalvandoSubstituicao] = useState(false);
   const [projetando, setProjetando] = useState(false);
   const [showField, setShowField] = useState(false);
+  const [clubeMap, setClubeMap] = useState<Record<string, string>>({});
 
+  // ── Swap modal state ──
+  const [swapVisible, setSwapVisible] = useState(false);
+  const [swapPosicao, setSwapPosicao] = useState('MEI');
+  const [swapApelidoAtual, setSwapApelidoAtual] = useState('');
+  const [swapPrecoSaindo, setSwapPrecoSaindo] = useState(0);
+  const [swapTipo, setSwapTipo] = useState<'titular' | 'reserva'>('titular');
+
+  useEffect(() => {
+    fetchClubes()
+      .then((clubes) => {
+        const map: Record<string, string> = {};
+        for (const [id, c] of Object.entries(clubes)) map[id] = c.nome;
+        setClubeMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Swap modal handlers ──
+  const openSwap = (posicao: string, apelido: string, preco: number, tipo: 'titular' | 'reserva') => {
+    setSwapPosicao(posicao);
+    setSwapApelidoAtual(apelido);
+    setSwapPrecoSaindo(preco);
+    setSwapTipo(tipo);
+    setSwapVisible(true);
+  };
+
+  const handleSwapConfirm = async (athlete: CartolaAthlete) => {
+    setSwapVisible(false);
+    const edit: LineupEdit = {
+      tipo: 'swap',
+      ts: Date.now(),
+      posicao: swapPosicao,
+    };
+
+    let novosPlayers = [...response.players];
+    let novasReservas = { ...response.reservas };
+
+    if (swapTipo === 'titular') {
+      const idx = novosPlayers.findIndex((p) => p.posicao === swapPosicao);
+      if (idx === -1) return;
+      const antigo = novosPlayers[idx];
+
+      edit.jogador_removido = {
+        atleta_id: antigo.atleta_id, apelido: antigo.apelido, posicao: antigo.posicao,
+        preco: antigo.preco, previsto: antigo.previsto, clube: antigo.clube, role: antigo.role,
+        media_num: antigo.media_num, jogos_num: antigo.jogos_num, variacao_num: antigo.variacao_num,
+        potential_valorizacao: antigo.potential_valorizacao, preco_projetado: antigo.preco_projetado,
+        tendencia: antigo.tendencia, eficiencia: antigo.eficiencia,
+      };
+      const novoClube = clubeMap[String(athlete.clube_id)] || String(athlete.clube_id);
+      edit.jogador_adicionado = {
+        atleta_id: athlete.atleta_id, apelido: athlete.apelido, posicao: antigo.posicao,
+        preco: athlete.preco_num, previsto: athlete.media_num, clube: novoClube,
+        role: antigo.role, media_num: athlete.media_num, jogos_num: athlete.jogos_num,
+        variacao_num: athlete.variacao_num, potential_valorizacao: athlete.potential_valorizacao,
+      };
+
+      novosPlayers[idx] = {
+        ...antigo,
+        atleta_id: athlete.atleta_id, apelido: athlete.apelido,
+        preco: athlete.preco_num, previsto: athlete.media_num,
+        clube: novoClube, media_num: athlete.media_num, jogos_num: athlete.jogos_num,
+        variacao_num: athlete.variacao_num, preco_projetado: athlete.preco_num,
+        potential_valorizacao: athlete.potential_valorizacao,
+      };
+
+      novasReservas[swapPosicao] = {
+        atleta_id: antigo.atleta_id, apelido: antigo.apelido, clube: antigo.clube,
+        posicao: swapPosicao, preco: antigo.preco, previsto: antigo.previsto,
+        media_num: antigo.media_num ?? 0, jogos_num: antigo.jogos_num ?? 0,
+        variacao_num: 0, potential_valorizacao: 0, preco_projetado: antigo.preco,
+        tendencia: '', eficiencia: 0, luxo: novasReservas[swapPosicao]?.luxo ?? false,
+      };
+    } else {
+      const antigo = novasReservas[swapPosicao];
+      if (!antigo) return;
+      const novoClube = clubeMap[String(athlete.clube_id)] || String(athlete.clube_id);
+
+      edit.jogador_removido = {
+        atleta_id: antigo.atleta_id, apelido: antigo.apelido, posicao: antigo.posicao,
+        preco: antigo.preco, previsto: antigo.previsto, clube: antigo.clube,
+        media_num: antigo.media_num, jogos_num: antigo.jogos_num, variacao_num: antigo.variacao_num,
+        potential_valorizacao: antigo.potential_valorizacao, preco_projetado: antigo.preco_projetado,
+        tendencia: antigo.tendencia, eficiencia: antigo.eficiencia,
+      };
+      edit.jogador_adicionado = {
+        atleta_id: athlete.atleta_id, apelido: athlete.apelido, posicao: swapPosicao,
+        preco: athlete.preco_num, previsto: athlete.media_num, clube: novoClube,
+      };
+
+      novasReservas[swapPosicao] = {
+        atleta_id: athlete.atleta_id, apelido: athlete.apelido, clube: novoClube,
+        posicao: swapPosicao, preco: athlete.preco_num, previsto: athlete.media_num,
+        media_num: athlete.media_num, jogos_num: athlete.jogos_num,
+        variacao_num: athlete.variacao_num, potential_valorizacao: athlete.potential_valorizacao,
+        preco_projetado: athlete.preco_num, tendencia: '', eficiencia: 0, luxo: antigo.luxo,
+      };
+    }
+
+    const updatedResponse = { ...response, players: novosPlayers, reservas: novasReservas };
+    const edits = [...(lineup.edits ?? []), edit];
+    const newLineup = { ...lineup, response: updatedResponse, edits, source: lineup.source ?? 'manual' as const };
+
+    try {
+      const enriched = await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada);
+      Object.assign(updatedResponse, enriched);
+    } catch {}
+
+    await saveLineup(newLineup);
+    navigation.replace('LineupDetail', { lineup: newLineup, league });
+  };
+
+  // ── Captain change ──
+  const handleCaptainChange = async (player: Player) => {
+    Alert.alert(
+      'Novo capitão',
+      `Tornar ${player.apelido} o capitão? Os pontos serão multiplicados por 1.5.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            const antigoCapId = response.players.find((p) => p.role === 'capitao')?.atleta_id;
+            const novosPlayers = response.players.map((p) => ({
+              ...p,
+              role: (p.atleta_id === player.atleta_id ? 'capitao' as const
+                : p.atleta_id === antigoCapId ? undefined : p.role) as 'capitao' | undefined,
+            }));
+
+            const edit: LineupEdit = {
+              tipo: 'capitao', ts: Date.now(),
+              capitao_anterior_id: antigoCapId, capitao_novo_id: player.atleta_id,
+            };
+
+            const updatedResponse = { ...response, players: novosPlayers };
+            const edits = [...(lineup.edits ?? []), edit];
+            const newLineup = { ...lineup, response: updatedResponse, edits, source: 'manual' as const };
+
+            try {
+              const enriched = await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada);
+              Object.assign(updatedResponse, enriched);
+            } catch {}
+
+            await saveLineup(newLineup);
+            navigation.replace('LineupDetail', { lineup: newLineup, league });
+          },
+        },
+      ],
+    );
+  };
+
+  // ── Undo last edit ──
+  const handleUndo = async () => {
+    const edits = lineup.edits ?? [];
+    if (edits.length === 0) return;
+    const last = edits[edits.length - 1];
+    const restante = edits.slice(0, -1);
+
+    if (last.tipo === 'swap' && last.jogador_removido && last.jogador_adicionado) {
+      const removido = last.jogador_removido;
+      const adicionado = last.jogador_adicionado;
+      let novosPlayers = [...response.players];
+      let novasReservas = { ...response.reservas };
+
+      const idx = novosPlayers.findIndex((p) => p.atleta_id === adicionado.atleta_id);
+      if (idx !== -1) {
+        // Undo titular swap
+        novosPlayers[idx] = {
+          ...novosPlayers[idx],
+          atleta_id: removido.atleta_id, apelido: removido.apelido, preco: removido.preco,
+          previsto: removido.previsto, clube: removido.clube, role: removido.role,
+          media_num: removido.media_num, jogos_num: removido.jogos_num,
+          variacao_num: removido.variacao_num, potential_valorizacao: removido.potential_valorizacao,
+          preco_projetado: removido.preco_projetado, tendencia: removido.tendencia,
+          eficiencia: removido.eficiencia,
+        };
+        const pos = last.posicao!;
+        novasReservas[pos] = {
+          atleta_id: adicionado.atleta_id, apelido: adicionado.apelido, clube: adicionado.clube,
+          posicao: adicionado.posicao, preco: adicionado.preco, previsto: adicionado.previsto,
+          media_num: 0, jogos_num: 0, variacao_num: 0, potential_valorizacao: 0,
+          preco_projetado: adicionado.preco, tendencia: '', eficiencia: 0,
+          luxo: novasReservas[pos]?.luxo ?? false,
+        };
+      } else {
+        // Undo reserva swap
+        const pos = last.posicao!;
+        novasReservas[pos] = {
+          atleta_id: removido.atleta_id, apelido: removido.apelido, clube: removido.clube,
+          posicao: removido.posicao, preco: removido.preco, previsto: removido.previsto,
+          media_num: removido.media_num ?? 0, jogos_num: removido.jogos_num ?? 0,
+          variacao_num: removido.variacao_num ?? 0, potential_valorizacao: removido.potential_valorizacao ?? 0,
+          preco_projetado: removido.preco_projetado ?? removido.preco,
+          tendencia: removido.tendencia ?? '', eficiencia: removido.eficiencia ?? 0,
+          luxo: novasReservas[pos]?.luxo ?? false,
+        };
+      }
+
+      const updatedResponse = { ...response, players: novosPlayers, reservas: novasReservas };
+      const newLineup = { ...lineup, response: updatedResponse, edits: restante };
+      try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
+      await saveLineup(newLineup);
+      navigation.replace('LineupDetail', { lineup: newLineup, league });
+    } else if (last.tipo === 'capitao' && last.capitao_anterior_id != null && last.capitao_novo_id != null) {
+      let novosPlayers = response.players.map((p) => ({
+        ...p,
+        role: (p.atleta_id === last.capitao_novo_id ? undefined
+          : p.atleta_id === last.capitao_anterior_id ? 'capitao' as const : p.role) as 'capitao' | undefined,
+      }));
+      const updatedResponse = { ...response, players: novosPlayers };
+      const newLineup = { ...lineup, response: updatedResponse, edits: restante };
+      try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
+      await saveLineup(newLineup);
+      navigation.replace('LineupDetail', { lineup: newLineup, league });
+    }
+  };
+
+  // ── Existing handlers ──
   const handleProjetar = async () => {
     setProjetando(true);
     try {
-      const capitaoId = response.players.find((p: Player) => p.role === 'capitao')?.atleta_id;
-      const request = {
-        atletas: response.players.map((p: Player) => p.atleta_id),
-        tecnico_id: response.tecnico?.atleta_id ?? 0,
-        capitao_id: capitaoId ?? 0,
-        rodada: lineup.rodada,
-        forcar: false,
-      };
-      const result = await postProjetar(request);
-
-      const enrichedPlayers = response.players.map((p: Player) => {
-        const enriched = ((result as any).jogadores ?? (result as any).players ?? []).find(
-          (j: any) => Number(j.atleta_id) === p.atleta_id,
-        );
-        return enriched ? { ...p, ...enriched, role: p.role } : p;
-      });
-
-      const updatedResponse = {
-        ...response,
-        pontos_previstos: result.pontos_previstos,
-        valorizacao_total: result.valorizacao_total,
-        players: enrichedPlayers,
-        tecnico: result.tecnico ?? response.tecnico,
-      };
-
+      const enriched = await projetarPlayers(response.players, response.tecnico, lineup.rodada);
+      const updatedResponse = { ...response, ...enriched };
       const updatedLineup = { ...lineup, response: updatedResponse };
-
       await saveLineup(updatedLineup);
       navigation.replace('LineupDetail', { lineup: updatedLineup, league });
     } catch {
@@ -88,6 +319,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       params: lineup.params,
       nome: lineup.nome,
       rodada: lineup.rodada,
+      edits: lineup.edits,
+      source: lineup.source,
     };
     try {
       await Clipboard.setStringAsync(JSON.stringify(payload, null, 2));
@@ -158,35 +391,24 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const handleVoltar = () => {
-    navigation.goBack();
-  };
+  const handleVoltar = () => { navigation.goBack(); };
 
   const handleSimularSubstituicao = () => {
     if (!pontuadosAtletas || !partidasData) {
       Alert.alert('Aguardando', 'Carregando dados de pontuação...');
       return;
     }
-
-    const result = calcularSubstituicoes(
-      lineup,
-      pontuadosAtletas,
-      partidasData.partidas,
-      partidasData.clubes,
-    );
-
+    const result = calcularSubstituicoes(lineup, pontuadosAtletas, partidasData.partidas, partidasData.clubes);
     if (!result) {
       Alert.alert('Sem substituições', 'Nenhum titular precisa ser substituído.');
       return;
     }
-
     setSubstituicaoResult(result);
   };
 
   const handleSalvarSubstituicao = async () => {
     if (!substituicaoResult) return;
     setSalvandoSubstituicao(true);
-
     try {
       const novosPlayers = [...response.players];
       const novasReservas = { ...response.reservas };
@@ -194,57 +416,35 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       for (const sub of substituicaoResult.substituicoes) {
         const idx = novosPlayers.findIndex((p) => p.atleta_id === sub.substituido_id);
         if (idx === -1) continue;
-
         const substituto = novasReservas[sub.posicao];
         if (!substituto) continue;
         const substituido = novosPlayers[idx];
 
         novosPlayers[idx] = {
-          atleta_id: substituto.atleta_id,
-          apelido: substituto.apelido,
-          posicao: substituto.posicao,
-          preco: substituto.preco,
-          previsto: substituto.previsto,
-          clube: substituto.clube,
+          atleta_id: substituto.atleta_id, apelido: substituto.apelido, posicao: substituto.posicao,
+          preco: substituto.preco, previsto: substituto.previsto, clube: substituto.clube,
           role: substituido.role === 'capitao' ? 'capitao' : undefined,
-          media_num: substituto.media_num,
-          jogos_num: substituto.jogos_num,
-          variacao_num: substituto.variacao_num,
-          potential_valorizacao: substituto.potential_valorizacao,
-          preco_projetado: substituto.preco_projetado,
-          tendencia: substituto.tendencia,
+          media_num: substituto.media_num, jogos_num: substituto.jogos_num,
+          variacao_num: substituto.variacao_num, potential_valorizacao: substituto.potential_valorizacao,
+          preco_projetado: substituto.preco_projetado, tendencia: substituto.tendencia,
           eficiencia: substituto.eficiencia,
         };
 
         novasReservas[sub.posicao] = {
-          atleta_id: substituido.atleta_id,
-          apelido: substituido.apelido,
-          clube: substituido.clube,
-          posicao: substituido.posicao,
-          preco: substituido.preco,
-          previsto: 0,
-          media_num: 0,
-          jogos_num: 0,
-          variacao_num: 0,
-          potential_valorizacao: 0,
-          preco_projetado: 0,
-          tendencia: '',
-          eficiencia: 0,
-          luxo: sub.motivo === 'reserva_luxo',
+          atleta_id: substituido.atleta_id, apelido: substituido.apelido,
+          clube: substituido.clube, posicao: substituido.posicao,
+          preco: substituido.preco, previsto: 0, media_num: 0, jogos_num: 0,
+          variacao_num: 0, potential_valorizacao: 0, preco_projetado: 0,
+          tendencia: '', eficiencia: 0, luxo: sub.motivo === 'reserva_luxo',
         };
       }
 
       const novoOrcamento = response.orcamento_usado + substituicaoResult.patrimonio_ajuste;
-
       const updatedResponse = {
-        ...response,
-        players: novosPlayers,
-        reservas: novasReservas,
-        pontos_previstos: substituicaoResult.pontos_finais,
-        orcamento_usado: novoOrcamento,
+        ...response, players: novosPlayers, reservas: novasReservas,
+        pontos_previstos: substituicaoResult.pontos_finais, orcamento_usado: novoOrcamento,
         substituicao: substituicaoResult,
       };
-
       const updatedLineup = {
         ...lineup,
         params: lineup.params ? { ...lineup.params, orcamento: novoOrcamento } : undefined,
@@ -254,75 +454,29 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       await saveLineup(updatedLineup);
 
       try {
-        const capitaoId = novosPlayers.find((p: Player) => p.role === 'capitao')?.atleta_id;
-        const projetada = await postProjetar({
-          atletas: novosPlayers.map((p: Player) => p.atleta_id),
-          tecnico_id: response.tecnico?.atleta_id ?? 0,
-          capitao_id: capitaoId ?? 0,
-          rodada: lineup.rodada,
-          forcar: false,
-        });
-
-        const enrichedPlayers = novosPlayers.map((p: Player) => {
-          const enriched = ((projetada as any).jogadores ?? (projetada as any).players ?? []).find(
-            (j: any) => Number(j.atleta_id) === p.atleta_id,
-          );
-          return enriched ? { ...p, ...enriched, role: p.role } : p;
-        });
-
-        updatedResponse.players = enrichedPlayers;
-        if (projetada.tecnico) updatedResponse.tecnico = projetada.tecnico;
-        updatedResponse.pontos_previstos = projetada.pontos_previstos;
-        updatedResponse.valorizacao_total = projetada.valorizacao_total;
+        const enriched = await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada);
+        Object.assign(updatedResponse, enriched);
         updatedLineup.response = updatedResponse;
         await saveLineup(updatedLineup);
       } catch {}
 
       if (lineup.atribuido_a_team_id) {
-        const todosTitulares = [
-          ...novosPlayers,
-          ...(response.tecnico ? [response.tecnico] : []),
-        ];
-
-        const valorizacaoTotal = todosTitulares.reduce(
-          (sum, p) => sum + Math.max(0, p.variacao_num ?? 0),
-          0,
-        );
-
-        const capitaoId = novosPlayers.find((p) => p.role === 'capitao')?.atleta_id;
-        const ptsComBonus = (atleta_id: number) => {
-          const pts = getPontuacao(atleta_id) ?? 0;
-          return atleta_id === capitaoId ? pts * 1.5 : pts;
-        };
-
-        const pontuacaoTotal = todosTitulares.reduce(
-          (sum, p) => sum + ptsComBonus(p.atleta_id),
-          0,
-        );
+        const todosTitulares = [...novosPlayers, ...(response.tecnico ? [response.tecnico] : [])];
+        const valorizacaoTotal = todosTitulares.reduce((sum, p) => sum + Math.max(0, p.variacao_num ?? 0), 0);
+        const capId = novosPlayers.find((p) => p.role === 'capitao')?.atleta_id;
+        const ptsCom = (id: number) => { const pts = getPontuacao(id) ?? 0; return id === capId ? pts * 1.5 : pts; };
+        const pontuacaoTotal = todosTitulares.reduce((sum, p) => sum + ptsCom(p.atleta_id), 0);
 
         const leagues = await getLeagues();
-        for (const league of leagues) {
-          const teamIdx = league.times.findIndex((t) => t.id === lineup.atribuido_a_team_id);
+        for (const liga of leagues) {
+          const teamIdx = liga.times.findIndex((t) => t.id === lineup.atribuido_a_team_id);
           if (teamIdx === -1) continue;
-
-          const team = { ...league.times[teamIdx] };
-
+          const team = { ...liga.times[teamIdx] };
           team.patrimonio += valorizacaoTotal;
-
-          if (league.modalidade === 'patrimonio') {
-            team.ranking += valorizacaoTotal;
-          } else {
-            team.ranking += pontuacaoTotal;
-          }
-
-          team.total_acumulado = league.modalidade === 'patrimonio'
-            ? team.patrimonio
-            : team.ranking;
-
-          const updatedTimes = [...league.times];
-          updatedTimes[teamIdx] = team;
-          await saveLeague({ ...league, times: updatedTimes });
-          break;
+          team.ranking = liga.modalidade === 'patrimonio' ? team.patrimonio : team.ranking + pontuacaoTotal;
+          team.total_acumulado = liga.modalidade === 'patrimonio' ? team.patrimonio : team.ranking;
+          const updatedTimes = [...liga.times]; updatedTimes[teamIdx] = team;
+          await saveLeague({ ...liga, times: updatedTimes }); break;
         }
       }
 
@@ -335,6 +489,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     }
   };
 
+  // ── Data fetch ──
   useEffect(() => {
     setSubstituicaoResult(response.substituicao ?? null);
     setPontuadosAtletas(null);
@@ -374,15 +529,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     return map;
   }, [partidasData]);
 
-  const getDuelo = (clube: string): string | null => {
-    return clubOpponents[clube] ?? null;
-  };
-
-  const getEntrouEmCampoColor = (atleta_id: number, isSubstituto?: boolean): string | undefined => {
-    if (isSubstituto) return theme.colors.primary;
-    if (entrouEmCampo(atleta_id) === false) return theme.colors.danger;
-    return undefined;
-  };
+  const getDuelo = (clube: string): string | null => clubOpponents[clube] ?? null;
 
   const capitaoId = response.players.find((p) => p.role === 'capitao')?.atleta_id;
   const ptsComBonus = (atleta_id: number): number => {
@@ -390,26 +537,23 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     return atleta_id === capitaoId ? pts * 1.5 : pts;
   };
 
-  const allPlayers = [
-    ...response.players,
-    ...(response.tecnico ? [response.tecnico] : []),
-  ];
+  const allPlayers = [...response.players, ...(response.tecnico ? [response.tecnico] : [])];
   const totalReal = hasPontuados
-    ? (substituicaoResult?.pontos_finais ??
-       allPlayers.reduce((sum, p) => sum + ptsComBonus(p.atleta_id), 0))
+    ? (substituicaoResult?.pontos_finais ?? allPlayers.reduce((sum, p) => sum + ptsComBonus(p.atleta_id), 0))
     : null;
 
   const substituidoIds = new Set(substituicaoResult?.substituicoes.map((s) => s.substituido_id) ?? []);
   const substitutoIds = new Set(substituicaoResult?.substituicoes.map((s) => s.substituto_id) ?? []);
+
+  const edits = lineup.edits ?? [];
+  const podeDesfazer = edits.length > 0 && !substituicaoResult;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
       <Card style={styles.resultHeader}>
         <Text style={styles.resultTitle}>{lineup.nome}</Text>
         <Text style={styles.resultRodada}>Rodada {lineup.rodada}</Text>
-        <Text style={styles.resultEsquema}>
-          Esquema tático: {response.formacao}
-        </Text>
+        <Text style={styles.resultEsquema}>Esquema tático: {response.formacao}</Text>
         <Text style={styles.resultFormacao}>
           Proj: {response.pontos_previstos.toFixed(1)} pts
           {totalReal !== null ? ` · Real: ${totalReal.toFixed(1)} pts` : ''}
@@ -419,6 +563,10 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           {lineup.params?.orcamento != null ? ` (patrimônio C$ ${lineup.params.orcamento.toFixed(2)})` : ''}
           {response.valorizacao_total != null ? ` · Val: ${response.valorizacao_total >= 0 ? '+' : ''}C$ ${response.valorizacao_total.toFixed(2)}` : ''}
         </Text>
+        {lineup.source && (
+          <Badge variant={lineup.source === 'import' ? 'accent' : lineup.source === 'otimizar' ? 'primary' : 'info'}
+            label={SOURCE_LABELS[lineup.source] ?? lineup.source} size="md" />
+        )}
       </Card>
 
       {lineup.params?.foco != null && (
@@ -433,9 +581,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           {lineup.params.perfil && (
             <View style={styles.paramsRow}>
               <Text style={styles.paramsLabel}>Perfil</Text>
-              <Text style={styles.paramsValue}>
-                {lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}
-              </Text>
+              <Text style={styles.paramsValue}>{lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}</Text>
             </View>
           )}
           {lineup.estrategia && (
@@ -455,81 +601,83 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         </Card>
       )}
 
+      {edits.length > 0 && (
+        <Card style={styles.editHistoryCard}>
+          <View style={styles.editHistoryRow}>
+            <Text style={styles.editHistoryTitle}>{edits.length} edição{edits.length > 1 ? 'ões' : ''}</Text>
+            {podeDesfazer && (
+              <TouchableOpacity style={styles.undoBtn} onPress={handleUndo}>
+                <Text style={styles.undoBtnText}>↩ Desfazer</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {edits.slice(-3).reverse().map((e, i) => (
+            <View key={e.ts + i} style={styles.editHistoryItem}>
+              <Text style={styles.editHistoryText}>
+                {e.tipo === 'swap'
+                  ? `⇄ Trocou ${e.jogador_adicionado?.apelido ?? '?'} por ${e.jogador_removido?.apelido ?? '?'} (${e.posicao})`
+                  : `⭐ ${e.capitao_novo_id ? 'Novo capitão' : 'Capitão alterado'}`
+                }
+              </Text>
+              <Text style={styles.editHistoryTime}>
+                {new Date(e.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          ))}
+        </Card>
+      )}
+
       <View style={styles.viewToggle}>
-        <TouchableOpacity
-          style={[styles.viewToggleBtn, !showField && styles.viewToggleActive]}
-          onPress={() => setShowField(false)}
-        >
+        <TouchableOpacity style={[styles.viewToggleBtn, !showField && styles.viewToggleActive]} onPress={() => setShowField(false)}>
           <Text style={[styles.viewToggleText, !showField && styles.viewToggleTextActive]}>Lista</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.viewToggleBtn, showField && styles.viewToggleActive]}
-          onPress={() => setShowField(true)}
-        >
+        <TouchableOpacity style={[styles.viewToggleBtn, showField && styles.viewToggleActive]} onPress={() => setShowField(true)}>
           <Text style={[styles.viewToggleText, showField && styles.viewToggleTextActive]}>Campo</Text>
         </TouchableOpacity>
       </View>
 
       {showField ? (
-        <SoccerField
-          players={response.players}
-          formacao={response.formacao}
-          tecnico={response.tecnico}
-          reservas={response.reservas}
-        />
+        <SoccerField players={response.players} formacao={response.formacao} tecnico={response.tecnico} reservas={response.reservas} />
       ) : (
-        <><SectionHeader label="Titulares" />
+      <><SectionHeader label="Titulares" />
       {response.players.map((p: Player) => {
         const pts = getPontuacao(p.atleta_id);
         const foiSubstituido = substituidoIds.has(p.atleta_id);
         const isSubstituto = substitutoIds.has(p.atleta_id);
-        const borderColor = foiSubstituido
-          ? theme.colors.danger
-          : isSubstituto
-            ? theme.colors.primary
-            : undefined;
+        const isCap = p.role === 'capitao';
+        const borderColor = foiSubstituido ? theme.colors.danger : isSubstituto ? theme.colors.primary : undefined;
+
         return (
-          <Card
-            key={p.atleta_id}
-            style={[
-              styles.playerCard,
-              borderColor ? { borderColor, borderWidth: 1.5 } : undefined,
-            ]}
-          >
+          <Card key={p.atleta_id} style={[styles.playerCard, borderColor ? { borderColor, borderWidth: 1.5 } : undefined]}>
             <View style={styles.playerTop}>
               <View style={{ flex: 1 }}>
                 <View style={styles.playerPosRow}>
-                  <Text style={styles.playerPos}>
-                    {posicoes[p.posicao] || p.posicao}
-                  </Text>
-                  {entrouEmCampo(p.atleta_id) === false && hasPontuados && (
-                    <Badge variant="danger" label="NÃO JOGOU" size="sm" />
-                  )}
-                  {foiSubstituido && (
-                    <Badge variant="danger" label="SUBSTITUÍDO" size="sm" />
-                  )}
-                  {isSubstituto && (
-                    <Badge variant="primary" label="ENTROU" size="sm" />
-                  )}
+                  <Text style={styles.playerPos}>{posicoes[p.posicao] || p.posicao}</Text>
+                  {entrouEmCampo(p.atleta_id) === false && hasPontuados && <Badge variant="danger" label="NÃO JOGOU" size="sm" />}
+                  {foiSubstituido && <Badge variant="danger" label="SUBSTITUÍDO" size="sm" />}
+                  {isSubstituto && <Badge variant="primary" label="ENTROU" size="sm" />}
                 </View>
-                <Text
-                  style={[
-                    styles.playerName,
-                    foiSubstituido ? { textDecorationLine: 'line-through', opacity: 0.6 } : undefined,
-                  ]}
-                >
-                  {p.apelido} · {p.clube}{p.role === 'capitao' ? ' ⭐' : ''}
-                </Text>
-                {getDuelo(p.clube) && (
-                  <Text style={styles.dueloText}>{getDuelo(p.clube)}</Text>
-                )}
+                <View style={styles.playerNameRow}>
+                  <Text style={[styles.playerName, foiSubstituido ? { textDecorationLine: 'line-through', opacity: 0.6 } : undefined]}>
+                    {p.apelido} · {p.clube}
+                  </Text>
+                  {isCap && (
+                    <TouchableOpacity style={styles.captainBtn} onPress={() => handleCaptainChange(p)}>
+                      <Text style={styles.captainBtnText}>⭐</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!isCap && <Text style={styles.captainDim}> ☆</Text>}
+                </View>
+                {getDuelo(p.clube) && <Text style={styles.dueloText}>{getDuelo(p.clube)}</Text>}
               </View>
-              <TouchableOpacity
-                style={styles.detailBtn}
-                onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}
-              >
-                <Text style={styles.detailBtnText}>i</Text>
-              </TouchableOpacity>
+              <View style={styles.playerActions}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => openSwap(p.posicao, p.apelido, p.preco, 'titular')}>
+                  <Text style={styles.actionBtnText}>⇄</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Justificar', { apelido: p.apelido, atleta_id: p.atleta_id, clube: p.clube })}>
+                  <Text style={styles.actionBtnText}>i</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.playerStats}>
               <View style={styles.playerStat}>
@@ -539,7 +687,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               <View style={styles.playerStat}>
                 <Text style={styles.playerStatValue}>
                   {p.previsto.toFixed(1)}
-                  {pts !== null ? ` (${p.role === 'capitao' ? (pts * 1.5).toFixed(1) : pts.toFixed(1)})` : ''}
+                  {pts !== null ? ` (${isCap ? (pts * 1.5).toFixed(1) : pts.toFixed(1)})` : ''}
                 </Text>
                 <Text style={styles.playerStatLabel}>Projeção</Text>
               </View>
@@ -551,9 +699,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               </View>
               {p.upside_score != null && (
                 <View style={styles.playerStat}>
-                  <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>
-                    {p.upside_score.toFixed(1)}
-                  </Text>
+                  <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>{p.upside_score.toFixed(1)}</Text>
                   <Text style={styles.playerStatLabel}>Upside</Text>
                 </View>
               )}
@@ -570,27 +716,15 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             <Card style={styles.tecnicoCard}>
               <View style={styles.tecnicoRow}>
                 <View>
-                  <Text style={styles.tecnicoName}>
-                    {response.tecnico.apelido} · {response.tecnico.clube}
-                  </Text>
-                  {getDuelo(response.tecnico.clube) && (
-                    <Text style={styles.dueloText}>{getDuelo(response.tecnico.clube)}</Text>
-                  )}
+                  <Text style={styles.tecnicoName}>{response.tecnico.apelido} · {response.tecnico.clube}</Text>
+                  {getDuelo(response.tecnico.clube) && <Text style={styles.dueloText}>{getDuelo(response.tecnico.clube)}</Text>}
                 </View>
                 <View style={styles.playerRight}>
-                  <Text style={styles.playerClub}>
-                    C$ {response.tecnico.preco.toFixed(2)}
-                  </Text>
-                  <Text style={styles.tecnicoPts}>
-                    {response.tecnico.previsto.toFixed(1)}
-                    {pts !== null ? ` (${pts.toFixed(1)})` : ''} pts
-                  </Text>
+                  <Text style={styles.playerClub}>C$ {response.tecnico.preco.toFixed(2)}</Text>
+                  <Text style={styles.tecnicoPts}>{response.tecnico.previsto.toFixed(1)}{pts !== null ? ` (${pts.toFixed(1)})` : ''} pts</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.detailBtn}
-                  onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}
-                >
-                  <Text style={styles.detailBtnText}>i</Text>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Justificar', { apelido: response.tecnico.apelido, atleta_id: response.tecnico.atleta_id, clube: response.tecnico.clube })}>
+                  <Text style={styles.actionBtnText}>i</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -603,9 +737,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>
             Proj: {response.pontos_previstos.toFixed(1)} · Real: {totalReal!.toFixed(1)}
-            {substituicaoResult && substituicaoResult.pontos_finais !== totalReal
-              ? ` → ${substituicaoResult.pontos_finais.toFixed(1)} pts`
-              : ''}
+            {substituicaoResult && substituicaoResult.pontos_finais !== totalReal ? ` → ${substituicaoResult.pontos_finais.toFixed(1)} pts` : ''}
           </Text>
         </Card>
       )}
@@ -618,17 +750,17 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             return (
               <Card key={pos}>
                 <View style={styles.reservaTop}>
-                  <View>
-                    <Text style={styles.reservaPos}>
-                      {posicoes[pos] || pos}{reserva.luxo ? ' ⭐' : ''}
-                    </Text>
-                    <Text style={styles.reservaName}>
-                      {reserva.apelido} · {reserva.clube}
-                    </Text>
-                    {getDuelo(reserva.clube) && (
-                      <Text style={styles.dueloText}>{getDuelo(reserva.clube)}</Text>
-                    )}
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.playerPosRow}>
+                      <Text style={styles.reservaPos}>{posicoes[pos] || pos}</Text>
+                      {reserva.luxo && <Badge variant="accent" label="LUXO" size="sm" />}
+                    </View>
+                    <Text style={styles.reservaName}>{reserva.apelido} · {reserva.clube}</Text>
+                    {getDuelo(reserva.clube) && <Text style={styles.dueloText}>{getDuelo(reserva.clube)}</Text>}
                   </View>
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => openSwap(pos, reserva.apelido, reserva.preco, 'reserva')}>
+                    <Text style={styles.actionBtnText}>⇄</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.reservaStats}>
                   <View style={styles.playerStat}>
@@ -649,9 +781,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                   </View>
                   {reserva.upside_score != null && (
                     <View style={styles.playerStat}>
-                      <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>
-                        {reserva.upside_score.toFixed(1)}
-                      </Text>
+                      <Text style={[styles.playerStatValue, { color: theme.colors.accent }]}>{reserva.upside_score.toFixed(1)}</Text>
                       <Text style={styles.playerStatLabel}>Upside</Text>
                     </View>
                   )}
@@ -685,10 +815,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             </Text>
             {substituicaoResult.substituicoes.map((s, i) => (
               <View key={i} style={styles.substituicaoRow}>
-                <Badge
-                  variant={s.motivo === 'nao_jogou' ? 'danger' : 'accent'}
-                  label={s.motivo === 'nao_jogou' ? 'NÃO JOGOU' : 'RESERVA LUXO'}
-                />
+                <Badge variant={s.motivo === 'nao_jogou' ? 'danger' : 'accent'} label={s.motivo === 'nao_jogou' ? 'NÃO JOGOU' : 'RESERVA LUXO'} />
                 <Text style={styles.substituicaoText}>
                   <Text style={{ color: theme.colors.danger }}>{s.substituido_apelido}</Text>
                   {' → '}
@@ -700,33 +827,20 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               </View>
             ))}
           </Card>
-
-          <Button
-            variant="primary"
-            label={salvandoSubstituicao ? 'Salvando...' : 'Salvar substituição'}
-            onPress={handleSalvarSubstituicao}
-            disabled={salvandoSubstituicao}
-          />
+          <Button variant="primary" label={salvandoSubstituicao ? 'Salvando...' : 'Salvar substituição'} onPress={handleSalvarSubstituicao} disabled={salvandoSubstituicao} />
         </>
       )}
 
       {hasPontuados && !substituicaoResult && (
-        <Button
-          variant="primary"
-          label="Simular substituição"
-          onPress={handleSimularSubstituicao}
-        />
+        <Button variant="primary" label="Simular substituição" onPress={handleSimularSubstituicao} />
       )}
 
       <Button variant="outline" label={projetando ? "Projetando..." : "Atualizar projeções"} onPress={handleProjetar} disabled={projetando} />
 
-      <Button
-        variant="primary"
-        label="Gerar nova escalação"
+      <Button variant="primary" label="Gerar nova escalação"
         onPress={() => {
           const params = {
-            rodada: lineup.rodada,
-            nome: `Nova ${lineup.nome}`,
+            rodada: lineup.rodada, nome: `Nova ${lineup.nome}`,
             orcamento: String(lineup.params?.orcamento ?? 100),
             formacao: lineup.params?.formacao ?? 'auto',
             perfil: lineup.params?.perfil ?? 'neutro',
@@ -736,11 +850,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             obrigarText: (lineup.params?.obrigar ?? []).join(','),
             excluirText: (lineup.params?.excluir ?? []).join(','),
           };
-          if (league) {
-            navigation.getParent()?.navigate('Escalações', { screen: 'NewLineup', params });
-          } else {
-            navigation.navigate('NewLineup', params);
-          }
+          if (league) navigation.getParent()?.navigate('Escalações', { screen: 'NewLineup', params });
+          else navigation.navigate('NewLineup', params);
         }}
       />
 
@@ -756,389 +867,104 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Excluir escalação</Text>
-            <Text style={styles.modalMsg}>
-              Tem certeza que deseja excluir "{lineup.nome}"?
-            </Text>
+            <Text style={styles.modalMsg}>Tem certeza que deseja excluir "{lineup.nome}"?</Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => setShowDeleteModal(false)}
-              >
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDeleteModal(false)}>
                 <Text style={styles.modalCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirm}
-                onPress={handleDelete}
-              >
+              <TouchableOpacity style={styles.modalConfirm} onPress={handleDelete}>
                 <Text style={styles.modalConfirmText}>Excluir</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      <PlayerSwapModal
+        visible={swapVisible}
+        posicao={swapPosicao}
+        apelidoAtual={swapApelidoAtual}
+        precoSaindo={swapPrecoSaindo}
+        orcamentoUsado={response.orcamento_usado}
+        orcamentoMax={lineup.params?.orcamento}
+        onClose={() => setSwapVisible(false)}
+        onConfirm={handleSwapConfirm}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bg,
-  },
-  inner: {
-    padding: theme.spacing.xl,
-    paddingBottom: 40,
-  },
-  resultHeader: {
-    alignItems: 'center',
-    marginBottom: theme.spacing['2xl'],
-  },
-  paramsBox: {
-    marginBottom: theme.spacing.lg,
-  },
-  paramsTitle: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.xs,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: theme.letterSpacing.wider,
-    marginBottom: theme.spacing.md,
-  },
-  paramsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
-  },
-  paramsLabel: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
-  paramsValue: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.text,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  resultTitle: {
-    fontFamily: theme.fonts.heading,
-    fontSize: theme.fontSize['2xl'],
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-    letterSpacing: theme.letterSpacing.tight,
-  },
-  resultRodada: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  resultFormacao: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
-  },
-  resultEsquema: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
-    marginBottom: theme.spacing.xs,
-  },
-  resultOrcamento: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  detailBtn: {
-    position: 'absolute',
-    right: theme.spacing.sm,
-    top: theme.spacing.sm,
-    width: 22,
-    height: 22,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailBtnText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.sm,
-    fontWeight: theme.fontWeight.bold,
-    fontStyle: 'italic',
-  },
-  playerCard: {
-    marginBottom: theme.spacing.sm,
-  },
-  tecnicoCard: {
-    marginBottom: theme.spacing.sm,
-  },
-  tecnicoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tecnicoName: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.text,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  tecnicoClub: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  playerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
-  playerPos: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: theme.letterSpacing.wide,
-  },
-  playerName: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.text,
-    fontWeight: theme.fontWeight.semibold,
-    marginTop: theme.spacing.xs,
-  },
-  playerStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.md,
-  },
-  playerStat: {
-    alignItems: 'center',
-  },
-  playerStatValue: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fontWeight.bold,
-  },
-  playerStatLabel: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: theme.letterSpacing.wide,
-  },
-  playerRight: {
-    alignItems: 'flex-end',
-  },
-  playerClub: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
-  tecnicoPts: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  totalLabel: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    fontWeight: theme.fontWeight.bold,
-    color: theme.colors.text,
-  },
-  totalValue: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    fontWeight: theme.fontWeight.semibold,
-    color: theme.colors.primary,
-  },
-  dueloText: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.warning,
-    marginTop: theme.spacing.xs,
-    fontWeight: theme.fontWeight.medium,
-  },
-  reservaTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
-  reservaPos: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.xs,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: theme.letterSpacing.wide,
-  },
-  reservaName: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.text,
-    fontWeight: theme.fontWeight.semibold,
-    marginTop: theme.spacing.xs,
-  },
-  reservaStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.md,
-  },
-  compRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  compFormacao: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.text,
-  },
-  compPts: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing['3xl'],
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.borderRadius.xl,
-    padding: theme.spacing['2xl'],
-    width: '100%',
-    maxWidth: 340,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalTitle: {
-    fontFamily: theme.fonts.heading,
-    fontSize: theme.fontSize.xl,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-    letterSpacing: theme.letterSpacing.tight,
-  },
-  modalMsg: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textSecondary,
-    lineHeight: theme.spacing.xl,
-    marginBottom: theme.spacing['2xl'],
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  modalCancel: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  modalCancelText: {
-    fontFamily: theme.fonts.body,
-    color: theme.colors.textSecondary,
-    fontSize: theme.fontSize.base,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  modalConfirm: {
-    flex: 1,
-    backgroundColor: theme.colors.danger,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
-  modalConfirmText: {
-    fontFamily: theme.fonts.body,
-    color: '#fff',
-    fontSize: theme.fontSize.base,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  playerPosRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  substituicaoRow: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  substituicaoText: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.text,
-    marginTop: theme.spacing.xs,
-  },
-  substituicaoDetalhe: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    gap: 0,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    overflow: 'hidden',
-    alignSelf: 'stretch',
-  },
-  viewToggleBtn: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  viewToggleActive: {
-    backgroundColor: theme.colors.primaryGlow,
-  },
-  viewToggleText: {
-    fontFamily: theme.fonts.body,
-    fontSize: theme.fontSize.base,
-    color: theme.colors.textMuted,
-    fontWeight: theme.fontWeight.medium,
-    letterSpacing: theme.letterSpacing.wide,
-  },
-  viewToggleTextActive: {
-    color: theme.colors.primary,
-    fontWeight: theme.fontWeight.semibold,
-  },
-  bottomButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.lg,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.bg },
+  inner: { padding: theme.spacing.xl, paddingBottom: 40 },
+  resultHeader: { alignItems: 'center', marginBottom: theme.spacing['2xl'] },
+  paramsBox: { marginBottom: theme.spacing.lg },
+  paramsTitle: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, fontWeight: theme.fontWeight.semibold, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: theme.letterSpacing.wider, marginBottom: theme.spacing.md },
+  paramsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: theme.spacing.sm },
+  paramsLabel: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textSecondary },
+  paramsValue: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.text, fontWeight: theme.fontWeight.semibold },
+  resultTitle: { fontFamily: theme.fonts.heading, fontSize: theme.fontSize['2xl'], color: theme.colors.text, marginBottom: theme.spacing.xs, letterSpacing: theme.letterSpacing.tight },
+  resultRodada: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+  resultFormacao: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textSecondary },
+  resultEsquema: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.primary, fontWeight: theme.fontWeight.semibold, marginBottom: theme.spacing.xs },
+  resultOrcamento: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+  editHistoryCard: { marginBottom: theme.spacing.md, paddingVertical: theme.spacing.md },
+  editHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm },
+  editHistoryTitle: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.textSecondary, fontWeight: theme.fontWeight.semibold },
+  undoBtn: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.xs, borderRadius: theme.borderRadius.sm, borderWidth: 1, borderColor: theme.colors.warning, backgroundColor: 'rgba(210,153,34,0.1)' },
+  undoBtnText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.warning, fontWeight: theme.fontWeight.semibold },
+  editHistoryItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.xs },
+  editHistoryText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.textSecondary, flex: 1 },
+  editHistoryTime: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, color: theme.colors.textMuted, marginLeft: theme.spacing.sm },
+  playerCard: { marginBottom: theme.spacing.sm },
+  tecnicoCard: { marginBottom: theme.spacing.sm },
+  tecnicoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tecnicoName: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.md, color: theme.colors.text, fontWeight: theme.fontWeight.semibold },
+  playerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing.md },
+  playerPosRow: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.xs },
+  playerPos: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: theme.letterSpacing.wide },
+  playerNameRow: { flexDirection: 'row', alignItems: 'center' },
+  playerName: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.md, color: theme.colors.text, fontWeight: theme.fontWeight.semibold, marginTop: theme.spacing.xs },
+  captainBtn: { padding: 2 },
+  captainBtnText: { fontSize: theme.fontSize.lg },
+  captainDim: { fontSize: theme.fontSize.lg, color: theme.colors.textMuted },
+  playerActions: { flexDirection: 'row', gap: theme.spacing.xs },
+  actionBtn: { width: 26, height: 26, borderRadius: theme.borderRadius.full, backgroundColor: theme.colors.surfaceHighlight, alignItems: 'center', justifyContent: 'center' },
+  actionBtnText: { color: theme.colors.textSecondary, fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.bold },
+  playerStats: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: theme.spacing.md },
+  playerStat: { alignItems: 'center' },
+  playerStatValue: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.primary, fontWeight: theme.fontWeight.bold },
+  playerStatLabel: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, color: theme.colors.textMuted, marginTop: theme.spacing.xs, textTransform: 'uppercase', letterSpacing: theme.letterSpacing.wide },
+  playerRight: { alignItems: 'flex-end' },
+  playerClub: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.textSecondary },
+  tecnicoPts: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: theme.spacing.md },
+  totalLabel: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.bold, color: theme.colors.text },
+  totalValue: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.semibold, color: theme.colors.primary },
+  dueloText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, color: theme.colors.warning, marginTop: theme.spacing.xs, fontWeight: theme.fontWeight.medium },
+  reservaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: theme.spacing.md },
+  reservaPos: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.xs, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: theme.letterSpacing.wide },
+  reservaName: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.md, color: theme.colors.text, fontWeight: theme.fontWeight.semibold, marginTop: theme.spacing.xs },
+  reservaStats: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: theme.spacing.md },
+  compRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  compFormacao: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.text },
+  compPts: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.primary, fontWeight: theme.fontWeight.semibold },
+  modalOverlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'center', alignItems: 'center', padding: theme.spacing['3xl'] },
+  modalContent: { backgroundColor: theme.colors.surfaceElevated, borderRadius: theme.borderRadius.xl, padding: theme.spacing['2xl'], width: '100%', maxWidth: 340, borderWidth: 1, borderColor: theme.colors.border },
+  modalTitle: { fontFamily: theme.fonts.heading, fontSize: theme.fontSize.xl, color: theme.colors.text, marginBottom: theme.spacing.sm, letterSpacing: theme.letterSpacing.tight },
+  modalMsg: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textSecondary, lineHeight: theme.spacing.xl, marginBottom: theme.spacing['2xl'] },
+  modalButtons: { flexDirection: 'row', gap: theme.spacing.md },
+  modalCancel: { flex: 1, borderWidth: 1, borderColor: theme.colors.borderLight, borderRadius: theme.borderRadius.md, paddingVertical: theme.spacing.md, alignItems: 'center', backgroundColor: theme.colors.surface },
+  modalCancelText: { fontFamily: theme.fonts.body, color: theme.colors.textSecondary, fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.semibold },
+  modalConfirm: { flex: 1, backgroundColor: theme.colors.danger, borderRadius: theme.borderRadius.md, paddingVertical: theme.spacing.md, alignItems: 'center' },
+  modalConfirmText: { fontFamily: theme.fonts.body, color: '#fff', fontSize: theme.fontSize.base, fontWeight: theme.fontWeight.semibold },
+  substituicaoRow: { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.md, padding: theme.spacing.md, marginTop: theme.spacing.sm, borderWidth: 1, borderColor: theme.colors.border },
+  substituicaoText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.text, marginTop: theme.spacing.xs },
+  substituicaoDetalhe: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+  viewToggle: { flexDirection: 'row', gap: 0, marginBottom: theme.spacing.lg, borderRadius: theme.borderRadius.md, borderWidth: 1, borderColor: theme.colors.borderLight, overflow: 'hidden', alignSelf: 'stretch' },
+  viewToggleBtn: { flex: 1, paddingVertical: theme.spacing.sm, alignItems: 'center', backgroundColor: theme.colors.surface },
+  viewToggleActive: { backgroundColor: theme.colors.primaryGlow },
+  viewToggleText: { fontFamily: theme.fonts.body, fontSize: theme.fontSize.base, color: theme.colors.textMuted, fontWeight: theme.fontWeight.medium, letterSpacing: theme.letterSpacing.wide },
+  viewToggleTextActive: { color: theme.colors.primary, fontWeight: theme.fontWeight.semibold },
+  bottomButtons: { flexDirection: 'row', gap: theme.spacing.md, marginTop: theme.spacing.lg },
 });

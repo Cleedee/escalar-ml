@@ -12,9 +12,10 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, CartolaTeamResponse, League, Lineup, OtimizarParams, OtimizarResponse, Perfil, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
+import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, League, Lineup, OtimizarParams, Perfil, Player, ProjetarResponse, Reserva, ResultadoResponse, TeamSearchResult, Tecnico, Team } from '../types';
 import { fetchClubes, fetchMercado, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
+import { enrichLineupWithProjetar, mapCartolaToLineup } from '../services/cartola';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -24,15 +25,6 @@ import usePageTitle from '../usePageTitle';
 const RODADAS = Array.from({ length: 38 }, (_, i) => i + 1);
 const POS_MAP: Record<number, string> = { 1: 'GOL', 2: 'LAT', 3: 'ZAG', 4: 'MEI', 5: 'ATA', 6: 'TEC' };
 
-const POS_ABBR: Record<number, string> = {
-  1: 'GOL',
-  2: 'LAT',
-  3: 'ZAG',
-  4: 'MEI',
-  5: 'ATA',
-  6: 'TEC',
-};
-
 const PERFIS: Array<{ key: Perfil; label: string }> = [
   { key: 'neutro', label: 'Neutro' },
   { key: 'agressivo', label: 'Agressivo' },
@@ -40,92 +32,6 @@ const PERFIS: Array<{ key: Perfil; label: string }> = [
   { key: 'upside', label: 'Upside' },
 ];
 
-function mapCartolaToLineup(res: CartolaTeamResponse, clubes: Record<string, { nome: string }>, rodada: number): Lineup {
-  const clubMap: Record<number, string> = {};
-  for (const [idStr, c] of Object.entries(clubes)) {
-    clubMap[Number(idStr)] = c.nome;
-  }
-
-  const fc = (id: number) => clubMap[id] || String(id);
-
-  const starters = res.atletas.filter((a) => a.posicao_id !== 6);
-  const tecAtletas = res.atletas.filter((a) => a.posicao_id === 6);
-  const bench = res.reservas || [];
-
-  const players: Player[] = starters.map((atleta) => ({
-    atleta_id: atleta.atleta_id,
-    apelido: atleta.apelido,
-    posicao: POS_ABBR[atleta.posicao_id] || 'MEI',
-    preco: atleta.preco_num,
-    previsto: atleta.media_num,
-    clube: fc(atleta.clube_id),
-    role: res.capitao_id === atleta.atleta_id ? 'capitao' : undefined,
-  }));
-
-  const reservas: Record<string, Reserva> = {};
-  for (const atleta of bench) {
-    const pos = POS_ABBR[atleta.posicao_id] || 'MEI';
-    reservas[pos] = {
-      atleta_id: atleta.atleta_id,
-      apelido: atleta.apelido,
-      clube: fc(atleta.clube_id),
-      posicao: pos,
-      preco: atleta.preco_num,
-      previsto: atleta.media_num,
-      media_num: atleta.media_num,
-      jogos_num: atleta.jogos_num,
-      variacao_num: atleta.variacao_num,
-      potential_valorizacao: 0,
-      preco_projetado: atleta.preco_num,
-      tendencia: '',
-      eficiencia: 0,
-      luxo: res.reserva_luxo_id === atleta.atleta_id,
-    };
-  }
-
-  let tecnico: Tecnico = {
-    apelido: '',
-    clube: '',
-    atleta_id: 0,
-    preco: 0,
-    previsto: 0,
-  };
-  if (tecAtletas.length > 0) {
-    const t = tecAtletas[0];
-    tecnico = {
-      apelido: t.apelido,
-      clube: fc(t.clube_id),
-      atleta_id: t.atleta_id,
-      preco: t.preco_num,
-      previsto: t.media_num,
-      media_num: t.media_num,
-      jogos_num: t.jogos_num,
-    };
-  }
-
-  const defCount = players.filter((p) => p.posicao === 'LAT' || p.posicao === 'ZAG').length;
-  const meiCount = players.filter((p) => p.posicao === 'MEI').length;
-  const ataCount = players.filter((p) => p.posicao === 'ATA').length;
-
-  const response: OtimizarResponse = {
-    formacao: `${defCount}-${meiCount}-${ataCount}`,
-    pontos_previstos: players.reduce((s, p) => s + p.previsto, 0) + tecnico.previsto,
-    orcamento_usado: players.reduce((s, p) => s + p.preco, 0) + tecnico.preco,
-    players,
-    reservas,
-    tecnico,
-    comparacao: [],
-  };
-
-  return {
-    id: `cartola-${res.time.time_id}-${Date.now()}`,
-    nome: res.time.nome_cartola,
-    rodada,
-    atribuido_a_team_id: undefined,
-    created_at: new Date().toISOString(),
-    response,
-  };
-}
 
 export default function LeagueDetailScreen({ route, navigation }: any) {
   usePageTitle(route.params?.league?.nome ?? 'Liga');
@@ -276,42 +182,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
       ]);
 
       const lineup = mapCartolaToLineup(teamData, clubes, rodadaAtual);
-
-      try {
-        const fieldAtletas = teamData.atletas.filter((a) => a.posicao_id !== 6);
-        const tecAtletas = teamData.atletas.filter((a) => a.posicao_id === 6);
-        const precoCompra: Record<number, number> = {};
-        for (const a of teamData.atletas) {
-          precoCompra[a.atleta_id] = a.preco_num;
-        }
-        for (const a of teamData.reservas || []) {
-          precoCompra[a.atleta_id] = a.preco_num;
-        }
-
-        const projetada = await postProjetar({
-          atletas: fieldAtletas.map((a) => a.atleta_id),
-          tecnico_id: tecAtletas[0]?.atleta_id ?? 0,
-          capitao_id: teamData.capitao_id,
-          rodada: rodadaAtual,
-          forcar: false,
-          preco_compra: precoCompra,
-        });
-
-        lineup.response.players = lineup.response.players.map((p) => {
-          const enriched = projetada.jogadores.find((j) => j.atleta_id === p.atleta_id);
-          return enriched ? { ...p, ...enriched } : p;
-        });
-
-        const tecEnriched = projetada.tecnico;
-        if (tecEnriched?.atleta_id) {
-          Object.assign(lineup.response.tecnico, tecEnriched);
-        }
-
-        lineup.response.pontos_previstos = projetada.pontos_previstos;
-        lineup.response.valorizacao_total = projetada.valorizacao_total;
-      } catch {
-        // enrichment is optional — keep basic lineup from mapCartolaToLineup
-      }
+      await enrichLineupWithProjetar(lineup, teamData);
 
       lineup.atribuido_a_team_id = team.id;
       lineup.nome = `${team.nome} (importado)`;

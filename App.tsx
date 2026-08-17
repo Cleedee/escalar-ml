@@ -14,6 +14,7 @@ import StatusScreen from './src/screens/StatusScreen';
 import StatusDetailScreen from './src/screens/StatusDetailScreen';
 import LineupsScreen from './src/screens/LineupsScreen';
 import NewLineupScreen from './src/screens/NewLineupScreen';
+import DraftScreen from './src/screens/DraftScreen';
 import LineupDetailScreen from './src/screens/LineupDetailScreen';
 import JustificarScreen from './src/screens/JustificarScreen';
 import AtletasScreen from './src/screens/AtletasScreen';
@@ -43,6 +44,7 @@ function LineupsStack() {
       <Stack1.Screen name="LineupsList" component={LineupsScreen} />
       <Stack1.Screen name="NewLineup" component={NewLineupScreen} />
       <Stack1.Screen name="LineupDetail" component={LineupDetailScreen} />
+      <Stack1.Screen name="Draft" component={DraftScreen} />
       <Stack1.Screen name="Justificar" component={JustificarScreen} />
       <Stack1.Screen name="Help" component={HelpScreen} />
     </Stack1.Navigator>

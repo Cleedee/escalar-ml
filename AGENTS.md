@@ -322,6 +322,42 @@ Buttons in `LineupDetailScreen` are organized in three groups:
 ### State reset on lineup change
 `LineupDetailScreen` resets `substituicaoResult`, `pontuadosAtletas`, and `partidasData` via `useEffect` keyed on `lineup.id` instead of `lineup.rodada`. Prevents stale substitution data from a previous lineup when navigating across tabs.
 
+### Fase 1 — Escalar com mercado aberto ou fechado
+
+**Conscientização do mercado sem bloqueio** (`NewLineupScreen`):
+- `fetchStatus` + `fetchMercado` + `fetchClubes` + `getLeagues` carregados em paralelo na montagem.
+- Se `status_mercado ∈ {2,3,4,5}`, banner "Mercado fechado — projeções usam o último snapshot".
+- Botões de geração, draft e import **sempre habilitados** (sem bloqueio).
+
+**Validação de orçamento mínimo** (`calcOrcamentoMinimo`):
+- Calcula o custo do time mais barato do mercado (1 GOL + 2 def + 2 MEI + 1 ATA + 1 TEC).
+- Alerta antes de chamar `/otimizar` se `orcamento < minOrcamento`.
+
+**Validação de IDs obrigar/excluir** (`parseIds` + `mercadoIds` Set):
+- Confere se os IDs existem em `fetchMercado`; destaca inputs inválidos com `borderColor: danger`.
+- Exibe lista de IDs inexistentes; bloqueia geração com `Alert`.
+
+**Hints inline** (Perfil + Foco):
+- `PERFIL_DESC` exibe descrição do perfil selecionado (neutro/agressivo/conservador/upside).
+- Foco ganha explicação extra: "Quanto maior o foco, mais prioriza pontuação; menor, prioriza valorização (0–1)".
+
+**Atribuição a time da liga no fluxo principal** (`NewLineupScreen`):
+- Modal "Atribuir a..." com ligas (`getLeagues`) → times expansíveis.
+- Seleciona `atribuidoTeamId`; preenche `atribuido_a_team_id` no `Lineup` ao gerar.
+- Exibe `{team} · {league}` no card da lista (`LineupsScreen` — já existia).
+
+**Import avulso do Cartola** (`LineupsScreen` + novo `src/services/cartola.ts`):
+- Botão "📥 Importar do Cartola" na lista de escalações (fora do contexto de liga).
+- Modal de busca (reuso de `fetchTeams` + debounce de 400ms, padrão `LeagueDetailScreen`).
+- Ao selecionar: `importCartolaLineup(time_id, rodada)` → `fetchTeamById` + `mapCartolaToLineup` + `enrichLineupWithProjetar` → `saveLineup` → navega.
+- Funciona com mercado aberto **ou fechado** (reflete a escalação feita no app oficial).
+
+**Badge de mercado na lista** (`LineupsScreen`):
+- Badge acima do seletor de rodada com `STATUS_MAP[status_mercado].label`.
+- Variant: primary (aberto), warning (fechado/rolando), info (concluída), neutral (outros).
+
+**Arquivo novo:** `src/services/cartola.ts` — extrai `mapCartolaToLineup` (antes embutido em `LeagueDetailScreen`), adiciona `enrichLineupWithProjetar` e `importCartolaLineup`.
+
 ## Development
 
 ```bash

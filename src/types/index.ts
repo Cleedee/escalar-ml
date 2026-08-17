@@ -108,6 +108,53 @@ export interface Lineup {
   params?: OtimizarParams;
   response: OtimizarResponse;
   estrategia?: string;
+  source?: 'otimizar' | 'import' | 'draft' | 'manual';
+  projetado?: boolean;
+  mercado_snapshot?: { status_mercado: number; rodada_atual: number; ts: number };
+  edits?: LineupEdit[];
+}
+
+export interface LineupEdit {
+  tipo: 'swap' | 'capitao';
+  ts: number;
+  posicao?: string;
+  /** Jogador removido do time (swap) — guardado para undo */
+  jogador_removido?: {
+    atleta_id: number;
+    apelido: string;
+    posicao: string;
+    preco: number;
+    previsto: number;
+    clube: string;
+    role?: 'capitao';
+    media_num?: number;
+    jogos_num?: number;
+    variacao_num?: number;
+    potential_valorizacao?: number;
+    preco_projetado?: number;
+    tendencia?: string;
+    eficiencia?: number;
+  };
+  /** Jogador adicionado ao time (swap) */
+  jogador_adicionado?: {
+    atleta_id: number;
+    apelido: string;
+    posicao: string;
+    preco: number;
+    previsto: number;
+    clube: string;
+    role?: 'capitao';
+    media_num?: number;
+    jogos_num?: number;
+    variacao_num?: number;
+    potential_valorizacao?: number;
+    preco_projetado?: number;
+    tendencia?: string;
+    eficiencia?: number;
+  };
+  /** Capitão anterior (capitao) */
+  capitao_anterior_id?: number;
+  capitao_novo_id?: number;
 }
 
 export interface Team {
@@ -394,6 +441,11 @@ export interface PartidaInfo {
 export interface PartidasResponse {
   clubes: Record<string, { nome: string; abreviacao: string }>;
   partidas: PartidaInfo[];
+}
+
+export interface SlotSelection {
+  posicao: string;
+  atleta: CartolaAthlete | null;
 }
 
 export interface CartolaAthlete {
