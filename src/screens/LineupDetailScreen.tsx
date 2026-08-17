@@ -85,7 +85,8 @@ async function projetarPlayers(
 
 export default function LineupDetailScreen({ route, navigation }: any) {
   usePageTitle('Escalação');
-  const { lineup, league } = route.params;
+  const { league } = route.params;
+  const [lineup, setLineup] = useState(route.params.lineup);
   const { response } = lineup;
   const [pontuadosAtletas, setPontuadosAtletas] = useState<Record<string, PontuadoAthlete> | null>(null);
   const [partidasData, setPartidasData] = useState<PartidasResponse | null>(null);
@@ -248,7 +249,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     } catch {}
 
     await saveLineup(newLineup);
-    navigation.replace('LineupDetail', { lineup: newLineup, league });
+    setLineup(newLineup);
   };
 
   // ── Captain change ──
@@ -284,7 +285,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             } catch {}
 
             await saveLineup(newLineup);
-            navigation.replace('LineupDetail', { lineup: newLineup, league });
+            setLineup(newLineup);
           },
         },
       ],
@@ -344,7 +345,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       const newLineup = { ...lineup, response: updatedResponse, edits: restante, versions };
       try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
       await saveLineup(newLineup);
-      navigation.replace('LineupDetail', { lineup: newLineup, league });
+      setLineup(newLineup);
     } else if (last.tipo === 'capitao' && last.capitao_anterior_id != null && last.capitao_novo_id != null) {
       let novosPlayers = response.players.map((p) => ({
         ...p,
@@ -355,7 +356,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       const newLineup = { ...lineup, response: updatedResponse, edits: restante, versions };
       try { Object.assign(updatedResponse, await projetarPlayers(novosPlayers, response.tecnico, lineup.rodada)); } catch {}
       await saveLineup(newLineup);
-      navigation.replace('LineupDetail', { lineup: newLineup, league });
+      setLineup(newLineup);
     }
   };
 
@@ -368,7 +369,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       const updatedResponse = { ...response, ...enriched };
       const updatedLineup = { ...lineup, response: updatedResponse, versions };
       await saveLineup(updatedLineup);
-      navigation.replace('LineupDetail', { lineup: updatedLineup, league });
+      setLineup(updatedLineup);
     } catch {
       Alert.alert('Erro', 'Não foi possível atualizar as projeções.');
     } finally {
@@ -397,7 +398,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       projetado: true,
     };
     await saveLineup(newLineup);
-    navigation.replace('LineupDetail', { lineup: newLineup, league });
+    setLineup(newLineup);
   };
 
   // ── Import rival lineup (Fase 4.1) ──
@@ -593,7 +594,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       }
 
       Alert.alert('Salvo', 'Substituições aplicadas e salvas com sucesso!');
-      navigation.replace('LineupDetail', { lineup: updatedLineup, league });
+      setLineup(updatedLineup);
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar as substituições.');
     } finally {
