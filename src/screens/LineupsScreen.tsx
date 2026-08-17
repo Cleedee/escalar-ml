@@ -160,6 +160,7 @@ export default function LineupsScreen({ navigation }: any) {
           />
           <Button variant="primary" label="+ Nova" onPress={() => navigation.navigate('NewLineup', { rodada })} />
           <Button variant="outline" label="✏ Montar na mão" onPress={() => navigation.navigate('Draft', { rodada })} />
+          <Button variant="outline" label="📊 Histórico" onPress={() => navigation.navigate('PlayerHistory')} />
         </View>
       </View>
 
