@@ -16,6 +16,7 @@ import { BotEscalarRequest, BotEscalarResponse, CartolaAthlete, League, Lineup, 
 import { fetchClubes, fetchMercado, fetchStatus, fetchTeamById, fetchTeams, fetchTeamBySlug, postBotEscalar, postProjetar, postResultado } from '../services/api';
 import { getLineups, saveLeague, saveLineup } from '../services/storage';
 import { enrichLineupWithProjetar, mapCartolaToLineup } from '../services/cartola';
+import { consolidateLeague } from '../services/consolidation';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -64,6 +65,8 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const [botLoading, setBotLoading] = useState(false);
   const [consolidando, setConsolidando] = useState(false);
   const [consolidacaoLog, setConsolidacaoLog] = useState<string[]>([]);
+  const [consolidandoLiga, setConsolidandoLiga] = useState(false);
+  const [consolidacaoLigaLog, setConsolidacaoLigaLog] = useState<string[]>([]);
   const [rodadaAtual, setRodadaAtual] = useState(1);
   const [statusMercado, setStatusMercado] = useState(0);
   const [rodadaSelecionada, setRodadaSelecionada] = useState(1);
@@ -654,6 +657,45 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         ? 'Consolidando...'
         : 'Consolidar rodada';
 
+  // ── Consolidar liga completa ──
+  const handleConsolidarLiga = async () => {
+    setConsolidandoLiga(true);
+    setConsolidacaoLigaLog([]);
+    const log = (msg: string) => setConsolidacaoLigaLog((prev) => [...prev, msg]);
+
+    try {
+      const lineups = await getLineups();
+      log('Consolidando ' + league.nome + ' (R' + league.rodada_inicial + ' a R' + league.rodada_final + ')...');
+      log(league.times.length + ' times, ' + lineups.length + ' escalacoes no total');
+
+      for (const team of league.times) {
+        const count = lineups.filter(
+          (l) => l.atribuido_a_team_id === team.id && l.rodada >= league.rodada_inicial && l.rodada <= league.rodada_final,
+        ).length;
+        log('  ' + team.nome + ': ' + count + ' escalacoes');
+      }
+
+      const { results, updatedLeague } = await consolidateLeague(league, lineups);
+
+      await saveLeague(updatedLeague);
+      setLeague(updatedLeague);
+
+      log('');
+      log('Classificacao final:');
+      for (const r of results) {
+        const label = r.totalReal != null
+          ? r.totalReal.toFixed(2) + ' pts reais'
+          : r.totalPrevisto.toFixed(2) + ' pts previstos';
+        log('  ' + r.ranking + ' ' + r.teamNome + ': ' + label);
+      }
+      log('Consolidado!');
+    } catch (e: any) {
+      log('Erro: ' + (e?.message || 'Falha na consolidacao'));
+    } finally {
+      setConsolidandoLiga(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -767,6 +809,13 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         disabled={consolidarDesabilitado}
       />
 
+      <Button
+        variant="primary"
+        label={consolidandoLiga ? 'Consolidando...' : 'Consolidar liga'}
+        onPress={handleConsolidarLiga}
+        disabled={consolidandoLiga}
+      />
+
       <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
 
       <Modal visible={consolidando || consolidacaoLog.length > 0} transparent animationType="fade">
@@ -782,6 +831,24 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
             </ScrollView>
             {!consolidando && (
               <Button variant="primary" label="Fechar" onPress={() => setConsolidacaoLog([])} />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={consolidandoLiga || consolidacaoLigaLog.length > 0} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Consolidando liga…</Text>
+            <ScrollView style={{ maxHeight: 300, marginVertical: 16 }}>
+              {consolidacaoLigaLog.map((msg, i) => (
+                <Text key={i} style={{ color: theme.colors.text, fontSize: 13, lineHeight: 20 }}>
+                  {msg}
+                </Text>
+              ))}
+            </ScrollView>
+            {!consolidandoLiga && (
+              <Button variant="primary" label="Fechar" onPress={() => setConsolidacaoLigaLog([])} />
             )}
           </View>
         </View>
