@@ -147,7 +147,6 @@ export async function consolidateLeague(
     return {
       ...t,
       total_acumulado: novoTotal,
-      ranking: c.ranking,
       patrimonio: modalidade === 'patrimonio' ? novoTotal : t.patrimonio,
     };
   });
