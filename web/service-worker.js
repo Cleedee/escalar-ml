@@ -1,5 +1,5 @@
-const CACHE = 'escalarml-v3';
-const API_CACHE = 'escalarml-api-v3';
+const CACHE = 'escalarml-v4';
+const API_CACHE = 'escalarml-api-v4';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
