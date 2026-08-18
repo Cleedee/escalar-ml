@@ -180,11 +180,11 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
   const handleImportTeam = async (team: Team) => {
     try {
       const [teamData, clubes] = await Promise.all([
-        fetchTeamById(team.time_id!),
+        fetchTeamById(team.time_id!, rodadaSelecionada),
         fetchClubes(),
       ]);
 
-      const lineup = mapCartolaToLineup(teamData, clubes, rodadaAtual);
+      const lineup = mapCartolaToLineup(teamData, clubes, rodadaSelecionada);
       await enrichLineupWithProjetar(lineup, teamData);
 
       lineup.atribuido_a_team_id = team.id;
@@ -549,7 +549,7 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
         if (team.time_id) {
           try {
             const [teamData, clubes] = await Promise.all([
-              fetchTeamById(team.time_id),
+              fetchTeamById(team.time_id, rodada),
               fetchClubes(),
             ]);
             const lineup = mapCartolaToLineup(teamData, clubes, rodada);
