@@ -154,7 +154,7 @@ export async function importCartolaLineup(
   rodada: number,
   opts?: { atribuido_a_team_id?: string; nome?: string },
 ): Promise<Lineup> {
-  const [teamData, clubes] = await Promise.all([fetchTeamById(timeId, rodada), fetchClubes()]);
+  const [teamData, clubes] = await Promise.all([fetchTeamById(timeId), fetchClubes()]);
   const lineup = mapCartolaToLineup(teamData, clubes, rodada);
   await enrichLineupWithProjetar(lineup, teamData);
 

@@ -97,10 +97,8 @@ export async function fetchTeamBySlug(slug: string): Promise<TeamDetailResponse>
   return res.json();
 }
 
-export async function fetchTeamById(timeId: string | number, rodada?: number): Promise<CartolaTeamResponse> {
-  let url = `${API_BASE}/cartola/time/id/${timeId}`;
-  if (rodada != null) url += `/${rodada}`;
-  const res = await fetchWithRetry(url);
+export async function fetchTeamById(timeId: string | number): Promise<CartolaTeamResponse> {
+  const res = await fetchWithRetry(`${API_BASE}/cartola/time/id/${timeId}`);
   return res.json();
 }
 
