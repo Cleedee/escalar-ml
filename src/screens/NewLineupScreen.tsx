@@ -21,6 +21,13 @@ import usePageTitle from '../usePageTitle';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
 
+interface AthleteChip {
+  atleta_id: number;
+  apelido: string;
+  posicao: string;
+  clube: string;
+}
+
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 
 function labelFoco(v: number): string {
@@ -39,10 +46,6 @@ const PERFIL_DESC: Record<string, string> = {
   conservador: 'Prefere atletas com alta chance de jogar.',
   upside: 'Alto risco, alto retorno: atletas de picos altos.',
 };
-
-function parseIds(text: string): number[] {
-  return text.trim() ? text.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)) : [];
-}
 
 /** Custo do time mais barato possível do mercado: 1 GOL + 2 def + 2 MEI + 1 ATA + 1 TEC. */
 function calcOrcamentoMinimo(atletas: CartolaAthlete[]): number | null {
@@ -73,6 +76,17 @@ const POS_MAP: Record<number, string> = {
   6: 'TEC',
 };
 
+function findAthleteInMercado(mercado: CartolaAthlete[], id: number, clubes: Record<string, string>): AthleteChip | null {
+  const a = mercado.find((x) => x.atleta_id === id);
+  if (!a) return null;
+  return {
+    atleta_id: a.atleta_id,
+    apelido: a.apelido,
+    posicao: POS_MAP[a.posicao_id] || '?',
+    clube: clubes[String(a.clube_id)] || String(a.clube_id),
+  };
+}
+
 export default function NewLineupScreen({ route, navigation }: any) {
   const rodada = route.params?.rodada ?? 0;
 
@@ -83,8 +97,8 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [foco, setFoco] = useState(route.params?.foco ?? 1.0);
   const [incluirDuvidosos, setIncluirDuvidosos] = useState(route.params?.incluir_duvidosos ?? false);
   const [reservaLuxo, setReservaLuxo] = useState(route.params?.reserva_luxo ?? true);
-  const [obrigarText, setObrigarText] = useState(route.params?.obrigarText ?? '');
-  const [excluirText, setExcluirText] = useState(route.params?.excluirText ?? '');
+  const [obrigarChips, setObrigarChips] = useState<AthleteChip[]>([]);
+  const [excluirChips, setExcluirChips] = useState<AthleteChip[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
@@ -109,6 +123,28 @@ export default function NewLineupScreen({ route, navigation }: any) {
           map[id] = c.nome;
         }
         setClubeMap(map);
+        // Resolve initial IDs from route params into chips
+        const obrigarIds = route.params?.obrigar ?? [];
+        const excluirIds = route.params?.excluir ?? [];
+        if (obrigarIds.length > 0 || excluirIds.length > 0) {
+          const atletas = Object.values(mercado.atletas);
+          if (obrigarIds.length > 0) {
+            const chips: AthleteChip[] = [];
+            for (const id of obrigarIds) {
+              const a = atletas.find((x) => x.atleta_id === id);
+              if (a) chips.push({ atleta_id: a.atleta_id, apelido: a.apelido, posicao: POS_MAP[a.posicao_id] || '?', clube: map[String(a.clube_id)] || String(a.clube_id) });
+            }
+            setObrigarChips(chips);
+          }
+          if (excluirIds.length > 0) {
+            const chips: AthleteChip[] = [];
+            for (const id of excluirIds) {
+              const a = atletas.find((x) => x.atleta_id === id);
+              if (a) chips.push({ atleta_id: a.atleta_id, apelido: a.apelido, posicao: POS_MAP[a.posicao_id] || '?', clube: map[String(a.clube_id)] || String(a.clube_id) });
+            }
+            setExcluirChips(chips);
+          }
+        }
       })
       .catch(() => {});
     fetchStatus()
@@ -124,22 +160,25 @@ export default function NewLineupScreen({ route, navigation }: any) {
   }, []);
 
   const selectAthlete = useCallback((athlete: CartolaAthlete) => {
-    const idStr = String(athlete.atleta_id);
+    const chip: AthleteChip = {
+      atleta_id: athlete.atleta_id,
+      apelido: athlete.apelido,
+      posicao: POS_MAP[athlete.posicao_id] || '?',
+      clube: clubeMap[String(athlete.clube_id)] || String(athlete.clube_id),
+    };
     if (searchTarget === 'obrigar') {
-      setObrigarText((prev: string) => {
-        const ids = prev ? prev.split(',').map((s: string) => s.trim()) : [];
-        if (ids.includes(idStr)) return prev;
-        return prev ? `${prev}, ${idStr}` : idStr;
+      setObrigarChips((prev) => {
+        if (prev.some((c) => c.atleta_id === chip.atleta_id)) return prev;
+        return [...prev, chip];
       });
     } else {
-      setExcluirText((prev: string) => {
-        const ids = prev ? prev.split(',').map((s: string) => s.trim()) : [];
-        if (ids.includes(idStr)) return prev;
-        return prev ? `${prev}, ${idStr}` : idStr;
+      setExcluirChips((prev) => {
+        if (prev.some((c) => c.atleta_id === chip.atleta_id)) return prev;
+        return [...prev, chip];
       });
     }
     setShowSearch(false);
-  }, [searchTarget]);
+  }, [searchTarget, clubeMap]);
 
   const filtered = searchQuery.trim()
     ? mercadoAtletas.filter((a) =>
@@ -149,8 +188,8 @@ export default function NewLineupScreen({ route, navigation }: any) {
 
   const mercadoIds = useMemo(() => new Set(mercadoAtletas.map((a) => a.atleta_id)), [mercadoAtletas]);
   const minOrcamento = useMemo(() => calcOrcamentoMinimo(mercadoAtletas), [mercadoAtletas]);
-  const invalidObrigar = useMemo(() => parseIds(obrigarText).filter((id) => !mercadoIds.has(id)), [obrigarText, mercadoIds]);
-  const invalidExcluir = useMemo(() => parseIds(excluirText).filter((id) => !mercadoIds.has(id)), [excluirText, mercadoIds]);
+  const invalidObrigar = useMemo(() => obrigarChips.filter((c) => !mercadoIds.has(c.atleta_id)), [obrigarChips, mercadoIds]);
+  const invalidExcluir = useMemo(() => excluirChips.filter((c) => !mercadoIds.has(c.atleta_id)), [excluirChips, mercadoIds]);
   const atribuido = useMemo(() => {
     for (const liga of leagues) {
       const t = liga.times.find((tm) => tm.id === atribuidoTeamId);
@@ -177,17 +216,17 @@ export default function NewLineupScreen({ route, navigation }: any) {
       );
       return;
     }
-    const invalidIds = [...invalidObrigar, ...invalidExcluir];
+    const invalidIds = [...invalidObrigar.map((c) => c.atleta_id), ...invalidExcluir.map((c) => c.atleta_id)];
     if (invalidIds.length > 0) {
       Alert.alert(
         'IDs inválidos',
-        `Estes IDs não existem no mercado atual: ${invalidIds.join(', ')}. Use a busca (🔍) para selecionar atletas válidos.`,
+        `Estes atletas não existem no mercado atual: ${invalidIds.join(', ')}. Remova-os da lista e tente novamente.`,
       );
       return;
     }
 
-    const obrigar = parseIds(obrigarText);
-    const excluir = parseIds(excluirText);
+    const obrigar = obrigarChips.map((c) => c.atleta_id);
+    const excluir = excluirChips.map((c) => c.atleta_id);
 
     const params: OtimizarParams = {
       orcamento: budget,
@@ -402,42 +441,42 @@ export default function NewLineupScreen({ route, navigation }: any) {
 
         <Card>
           <SectionHeader label="Obrigar atletas" />
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.inputFlex, invalidObrigar.length > 0 && styles.inputInvalid]}
-              value={obrigarText}
-              onChangeText={setObrigarText}
-              placeholder="IDs separados por vírgula"
-              placeholderTextColor={theme.colors.textMuted}
-            />
-            <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('obrigar')}>
-              <Text style={styles.searchBtnText}>🔍</Text>
+          <Text style={styles.hintText}>Atletas selecionados serão incluídos na escalação.</Text>
+          <View style={styles.chipArea}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScrollContent}>
+              {obrigarChips.map((chip) => (
+                <View key={chip.atleta_id} style={[styles.chip, invalidObrigar.some((c) => c.atleta_id === chip.atleta_id) && styles.chipInvalid]}>
+                  <Text style={styles.chipText}>{chip.apelido} · {chip.clube}</Text>
+                  <TouchableOpacity onPress={() => setObrigarChips((prev) => prev.filter((c) => c.atleta_id !== chip.atleta_id))}>
+                    <Text style={styles.chipRemove}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {obrigarChips.length === 0 && <Text style={styles.chipEmpty}>Nenhum atleta selecionado</Text>}
+            </ScrollView>
+            <TouchableOpacity style={styles.chipAddBtn} onPress={() => openSearch('obrigar')}>
+              <Text style={styles.chipAddBtnText}>+</Text>
             </TouchableOpacity>
           </View>
-          {invalidObrigar.length > 0 && (
-            <Text style={styles.invalidText}>
-              IDs inexistentes no mercado: {invalidObrigar.join(', ')}
-            </Text>
-          )}
 
           <SectionHeader label="Excluir atletas" />
-          <View style={styles.inputRow}>
-            <TextInput
-              style={[styles.input, styles.inputFlex, invalidExcluir.length > 0 && styles.inputInvalid]}
-              value={excluirText}
-              onChangeText={setExcluirText}
-              placeholder="IDs separados por vírgula"
-              placeholderTextColor={theme.colors.textMuted}
-            />
-            <TouchableOpacity style={styles.searchBtn} onPress={() => openSearch('excluir')}>
-              <Text style={styles.searchBtnText}>🔍</Text>
+          <Text style={styles.hintText}>Atletas selecionados serão excluídos da escalação.</Text>
+          <View style={styles.chipArea}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScrollContent}>
+              {excluirChips.map((chip) => (
+                <View key={chip.atleta_id} style={[styles.chip, invalidExcluir.some((c) => c.atleta_id === chip.atleta_id) && styles.chipInvalid]}>
+                  <Text style={styles.chipText}>{chip.apelido} · {chip.clube}</Text>
+                  <TouchableOpacity onPress={() => setExcluirChips((prev) => prev.filter((c) => c.atleta_id !== chip.atleta_id))}>
+                    <Text style={styles.chipRemove}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {excluirChips.length === 0 && <Text style={styles.chipEmpty}>Nenhum atleta selecionado</Text>}
+            </ScrollView>
+            <TouchableOpacity style={styles.chipAddBtn} onPress={() => openSearch('excluir')}>
+              <Text style={styles.chipAddBtnText}>+</Text>
             </TouchableOpacity>
           </View>
-          {invalidExcluir.length > 0 && (
-            <Text style={styles.invalidText}>
-              IDs inexistentes no mercado: {invalidExcluir.join(', ')}
-            </Text>
-          )}
         </Card>
 
         {loading ? (
@@ -600,27 +639,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  inputFlex: {
-    flex: 1,
-  },
-  searchBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBtnText: {
-    fontSize: theme.fontSize.xl,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -825,8 +843,63 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     marginTop: theme.spacing.xs,
   },
-  inputInvalid: {
+  chipArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  chipScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    minHeight: 36,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+  },
+  chipInvalid: {
     borderColor: theme.colors.danger,
+  },
+  chipText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.text,
+    fontWeight: theme.fontWeight.medium,
+  },
+  chipRemove: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+    fontWeight: theme.fontWeight.bold,
+    padding: 2,
+  },
+  chipEmpty: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textMuted,
+  },
+  chipAddBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipAddBtnText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.base,
+    color: '#fff',
+    fontWeight: theme.fontWeight.bold,
   },
   atribuirBtn: {
     flexDirection: 'row',

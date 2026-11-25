@@ -1045,8 +1045,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             foco: lineup.params?.foco ?? 1.0,
             incluir_duvidosos: lineup.params?.incluir_duvidosos ?? false,
             reserva_luxo: lineup.params?.reserva_luxo ?? true,
-            obrigarText: (lineup.params?.obrigar ?? []).join(','),
-            excluirText: (lineup.params?.excluir ?? []).join(','),
+            obrigar: lineup.params?.obrigar ?? [],
+            excluir: lineup.params?.excluir ?? [],
           };
           if (league) navigation.getParent()?.navigate('Escalações', { screen: 'NewLineup', params });
           else navigation.navigate('NewLineup', params);
