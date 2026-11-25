@@ -118,6 +118,7 @@ export default function PlayerSwapModal({
               ) : (
                 filtered.map((a) => {
                   const isSelected = a.atleta_id === selectedId;
+                  const diffPreco = a.preco_num - precoSaindo;
                   return (
                     <TouchableOpacity
                       key={a.atleta_id}
@@ -133,7 +134,14 @@ export default function PlayerSwapModal({
                         </Text>
                       </View>
                       <View style={styles.itemRight}>
-                        <Text style={styles.itemPreco}>C$ {a.preco_num.toFixed(2)}</Text>
+                        <View style={styles.itemPriceCol}>
+                          <Text style={styles.itemPreco}>C$ {a.preco_num.toFixed(2)}</Text>
+                          {isSelected && (
+                            <Text style={[styles.itemDiff, diffPreco >= 0 ? styles.itemDiffUp : styles.itemDiffDown]}>
+                              {diffPreco >= 0 ? '+' : ''}{diffPreco.toFixed(2)} vs atual
+                            </Text>
+                          )}
+                        </View>
                         {isSelected && <Text style={styles.itemCheck}>✓</Text>}
                       </View>
                     </TouchableOpacity>
@@ -269,11 +277,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
+  itemPriceCol: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 1,
+  },
   itemPreco: {
     fontFamily: theme.fonts.body,
     fontSize: theme.fontSize.base,
     color: theme.colors.text,
     fontWeight: theme.fontWeight.semibold,
+  },
+  itemDiff: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.xs,
+    fontWeight: theme.fontWeight.bold,
+  },
+  itemDiffUp: {
+    color: theme.colors.primary,
+  },
+  itemDiffDown: {
+    color: theme.colors.danger,
   },
   itemCheck: {
     color: theme.colors.primary,
