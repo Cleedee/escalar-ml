@@ -28,6 +28,7 @@ import Badge from '../components/Badge';
 import ErrorBanner from '../components/ErrorBanner';
 import SoccerField from '../components/SoccerField';
 import PlayerSwapModal from '../components/PlayerSwapModal';
+import AccordionSection from '../components/AccordionSection';
 import { POS_LABEL } from '../services/uiHelpers';
 import { version as APP_VERSION } from '../../package.json';
 import usePageTitle from '../usePageTitle';
@@ -683,45 +684,41 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       </Card>
 
       {lineup.params?.foco != null && (
-        <Card elevated style={styles.paramsBox}>
-          <Text style={styles.paramsTitle}>Parâmetros da otimização</Text>
-          <View style={styles.paramsRow}>
-            <Text style={styles.paramsLabel}>Foco</Text>
-            <Text style={styles.paramsValue}>
-              {lineup.params.foco === 1.0 ? 'Só Pontuação' : lineup.params.foco >= 0.8 ? '↑ Pontuação' : lineup.params.foco === 0.7 ? 'Valoriz. Leve' : lineup.params.foco === 0.5 ? 'Equilibrado' : lineup.params.foco === 0.3 ? '↑ Valorização' : lineup.params.foco === 0.0 ? 'Só Valorização' : lineup.params.foco.toFixed(1)}
-            </Text>
-          </View>
-          {lineup.params.perfil && (
+        <AccordionSection label="Parâmetros da otimização">
+          <Card elevated>
             <View style={styles.paramsRow}>
-              <Text style={styles.paramsLabel}>Perfil</Text>
-              <Text style={styles.paramsValue}>{lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}</Text>
-            </View>
-          )}
-          {lineup.estrategia && (
-            <View style={styles.paramsRow}>
-              <Text style={styles.paramsLabel}>Estratégia</Text>
-              <Text style={[styles.paramsValue, { flex: 1, textAlign: 'right' }]}>{lineup.estrategia}</Text>
-            </View>
-          )}
-          {response.valorizacao_total != null && (
-            <View style={styles.paramsRow}>
-              <Text style={styles.paramsLabel}>Valorização proj.</Text>
-              <Text style={[styles.paramsValue, { color: theme.colors.info }]}>
-                {response.valorizacao_total >= 0 ? '+' : ''}C$ {response.valorizacao_total.toFixed(2)}
+              <Text style={styles.paramsLabel}>Foco</Text>
+              <Text style={styles.paramsValue}>
+                {lineup.params.foco === 1.0 ? 'Só Pontuação' : lineup.params.foco >= 0.8 ? '↑ Pontuação' : lineup.params.foco === 0.7 ? 'Valoriz. Leve' : lineup.params.foco === 0.5 ? 'Equilibrado' : lineup.params.foco === 0.3 ? '↑ Valorização' : lineup.params.foco === 0.0 ? 'Só Valorização' : lineup.params.foco.toFixed(1)}
               </Text>
             </View>
-          )}
-        </Card>
+            {lineup.params.perfil && (
+              <View style={styles.paramsRow}>
+                <Text style={styles.paramsLabel}>Perfil</Text>
+                <Text style={styles.paramsValue}>{lineup.params.perfil.charAt(0).toUpperCase() + lineup.params.perfil.slice(1)}</Text>
+              </View>
+            )}
+            {lineup.estrategia && (
+              <View style={styles.paramsRow}>
+                <Text style={styles.paramsLabel}>Estratégia</Text>
+                <Text style={[styles.paramsValue, { flex: 1, textAlign: 'right' }]}>{lineup.estrategia}</Text>
+              </View>
+            )}
+            {response.valorizacao_total != null && (
+              <View style={styles.paramsRow}>
+                <Text style={styles.paramsLabel}>Valorização proj.</Text>
+                <Text style={[styles.paramsValue, { color: theme.colors.info }]}>
+                  {response.valorizacao_total >= 0 ? '+' : ''}C$ {response.valorizacao_total.toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </Card>
+        </AccordionSection>
       )}
 
       {rivalInfo && (
+        <AccordionSection label={`Duelo · ${rivalInfo.ligaNome}`}>
         <Card style={styles.rivalCard}>
-          <SectionHeader
-            label={`Duelo · ${rivalInfo.ligaNome}`}
-            action={
-              <Text style={styles.rivalPos}>{rivalInfo.meuPosicao}º</Text>
-            }
-          />
           {importandoRival && (
             <View style={styles.rivalImporting}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -772,11 +769,12 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             );
           })}
         </Card>
+        </AccordionSection>
       )}
 
       {lineup.versions && lineup.versions.length > 0 && (
+        <AccordionSection label="Versões anteriores">
         <Card style={styles.editHistoryCard}>
-          <Text style={styles.paramsTitle}>Versões anteriores</Text>
           {lineup.versions.map((v: OtimizarResponse, i: number) => (
             <View key={i} style={styles.versionRow}>
               <View style={styles.versionInfo}>
@@ -797,6 +795,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             </View>
           ))}
         </Card>
+        </AccordionSection>
       )}
 
       {edits.length > 0 && (
@@ -992,15 +991,14 @@ export default function LineupDetailScreen({ route, navigation }: any) {
       </>)}  {/********** end of showField else / lista view **********/}
 
       {response.comparacao?.length > 0 && (
-        <>
-          <SectionHeader label="Comparação" />
-          {response.comparacao.map((c: any) => (
+        <AccordionSection label="Comparação de formações">
+        {response.comparacao.map((c: any) => (
             <Card key={c.formacao} style={styles.compRow}>
               <Text style={styles.compFormacao}>{c.formacao}</Text>
               <Text style={styles.compPts}>{c.pontos_previstos.toFixed(1)} pts</Text>
             </Card>
           ))}
-        </>
+        </AccordionSection>
       )}
 
       {substituicaoResult && (
