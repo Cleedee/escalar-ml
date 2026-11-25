@@ -14,6 +14,7 @@ import {
 import { CartolaAthlete, FORMACOES, League, Lineup, OtimizarParams, Perfil, STATUS_MAP } from '../types';
 import { fetchClubes, fetchMercado, fetchStatus, postOtimizar } from '../services/api';
 import { getLeagues, saveLineup } from '../services/storage';
+import { labelFoco, PERFIL_DESC, POS_MAP } from '../services/uiHelpers';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -31,23 +32,6 @@ interface AthleteChip {
 }
 
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-
-function labelFoco(v: number): string {
-  if (v === 1.0) return 'Só Pontuação';
-  if (v >= 0.8) return '↑ Pontuação';
-  if (v === 0.7) return 'Valoriz. Leve';
-  if (v === 0.5) return 'Equilibrado';
-  if (v === 0.3) return '↑ Valorização';
-  if (v === 0.0) return 'Só Valorização';
-  return v.toFixed(1);
-}
-
-const PERFIL_DESC: Record<string, string> = {
-  neutro: 'Equilíbrio entre pontuação e valorização.',
-  agressivo: 'Busca upside: assume mais risco por pontos altos.',
-  conservador: 'Prefere atletas com alta chance de jogar.',
-  upside: 'Alto risco, alto retorno: atletas de picos altos.',
-};
 
 /** Custo do time mais barato possível do mercado: 1 GOL + 2 def + 2 MEI + 1 ATA + 1 TEC. */
 function calcOrcamentoMinimo(atletas: CartolaAthlete[]): number | null {
@@ -67,26 +51,6 @@ function calcOrcamentoMinimo(atletas: CartolaAthlete[]): number | null {
     ata.preco_num +
     tec.preco_num
   );
-}
-
-const POS_MAP: Record<number, string> = {
-  1: 'GOL',
-  2: 'LAT',
-  3: 'ZAG',
-  4: 'MEI',
-  5: 'ATA',
-  6: 'TEC',
-};
-
-function findAthleteInMercado(mercado: CartolaAthlete[], id: number, clubes: Record<string, string>): AthleteChip | null {
-  const a = mercado.find((x) => x.atleta_id === id);
-  if (!a) return null;
-  return {
-    atleta_id: a.atleta_id,
-    apelido: a.apelido,
-    posicao: POS_MAP[a.posicao_id] || '?',
-    clube: clubes[String(a.clube_id)] || String(a.clube_id),
-  };
 }
 
 export default function NewLineupScreen({ route, navigation }: any) {

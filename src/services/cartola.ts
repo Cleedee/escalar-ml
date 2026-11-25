@@ -1,14 +1,6 @@
 import { CartolaTeamResponse, Lineup, OtimizarResponse, Player, Reserva, Tecnico } from '../types';
 import { fetchClubes, fetchTeamById, postProjetar } from './api';
-
-const POS_ABBR: Record<number, string> = {
-  1: 'GOL',
-  2: 'LAT',
-  3: 'ZAG',
-  4: 'MEI',
-  5: 'ATA',
-  6: 'TEC',
-};
+import { POS_MAP } from './uiHelpers';
 
 export function mapCartolaToLineup(
   res: CartolaTeamResponse,
@@ -29,7 +21,7 @@ export function mapCartolaToLineup(
   const players: Player[] = starters.map((atleta) => ({
     atleta_id: atleta.atleta_id,
     apelido: atleta.apelido,
-    posicao: POS_ABBR[atleta.posicao_id] || 'MEI',
+    posicao: POS_MAP[atleta.posicao_id] || 'MEI',
     preco: atleta.preco_num,
     previsto: atleta.media_num,
     clube: fc(atleta.clube_id),
@@ -38,7 +30,7 @@ export function mapCartolaToLineup(
 
   const reservas: Record<string, Reserva> = {};
   for (const atleta of bench) {
-    const pos = POS_ABBR[atleta.posicao_id] || 'MEI';
+    const pos = POS_MAP[atleta.posicao_id] || 'MEI';
     reservas[pos] = {
       atleta_id: atleta.atleta_id,
       apelido: atleta.apelido,

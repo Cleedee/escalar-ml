@@ -1464,7 +1464,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     alignItems: 'center',
   },
-  
+  pickerActive: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryGlow,
   },

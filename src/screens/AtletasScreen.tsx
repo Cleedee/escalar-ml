@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Atleta, CartolaAthlete } from '../types';
 import { fetchAtletas } from '../services/api';
+import { statusBadgeVariant, POSICOES, STATUS_LIST } from '../services/uiHelpers';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -19,36 +20,6 @@ import ErrorBanner from '../components/ErrorBanner';
 import usePageTitle from '../usePageTitle';
 
 type SortKey = 'preco_desc' | 'preco_asc' | 'media_desc' | 'media_asc';
-
-const POSICOES = [
-  { key: '', label: 'Todas' },
-  { key: 'GOL', label: 'Goleiro' },
-  { key: 'LAT', label: 'Lateral' },
-  { key: 'ZAG', label: 'Zagueiro' },
-  { key: 'MEI', label: 'Meia' },
-  { key: 'ATA', label: 'Atacante' },
-  { key: 'TEC', label: 'Técnico' },
-];
-
-const STATUS_LIST = [
-  { key: '', label: 'Todos' },
-  { key: 'Provável', label: 'Provável' },
-  { key: 'Duvidoso', label: 'Duvidoso' },
-  { key: 'Suspenso', label: 'Suspenso' },
-  { key: 'Lesionado', label: 'Lesionado' },
-  { key: 'Nulo', label: 'Nulo' },
-];
-
-function statusBadgeVariant(status: string): 'primary' | 'warning' | 'danger' | 'neutral' {
-  switch (status) {
-    case 'Provável': return 'primary';
-    case 'Duvidoso': return 'warning';
-    case 'Suspenso':
-    case 'Lesionado':
-    case 'Nulo': return 'danger';
-    default: return 'neutral';
-  }
-}
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'preco_desc', label: 'Preço ↓' },

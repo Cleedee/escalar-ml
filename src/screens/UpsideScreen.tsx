@@ -10,41 +10,12 @@ import {
 } from 'react-native';
 import { UpsideAthlete } from '../types';
 import { fetchUpside } from '../services/api';
+import { statusBadgeVariant, POSICOES, POS_LABEL } from '../services/uiHelpers';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
 import usePageTitle from '../usePageTitle';
-
-const POSICOES = [
-  { key: '', label: 'Todas' },
-  { key: 'GOL', label: 'Goleiro' },
-  { key: 'LAT', label: 'Lateral' },
-  { key: 'ZAG', label: 'Zagueiro' },
-  { key: 'MEI', label: 'Meia' },
-  { key: 'ATA', label: 'Atacante' },
-  { key: 'TEC', label: 'Técnico' },
-];
-
-const POS_MAP: Record<string, string> = {
-  GOL: 'Goleiro',
-  LAT: 'Lateral',
-  ZAG: 'Zagueiro',
-  MEI: 'Meia',
-  ATA: 'Atacante',
-  TEC: 'Técnico',
-};
-
-function statusBadgeVariant(status: string): 'primary' | 'warning' | 'danger' | 'neutral' {
-  switch (status) {
-    case 'Provável': return 'primary';
-    case 'Duvidoso': return 'warning';
-    case 'Suspenso':
-    case 'Lesionado':
-    case 'Nulo': return 'danger';
-    default: return 'neutral';
-  }
-}
 
 export default function UpsideScreen({ navigation }: any) {
   usePageTitle('Upside');
@@ -135,7 +106,7 @@ export default function UpsideScreen({ navigation }: any) {
                   <View>
                     <Text style={styles.cardNome}>{item.apelido}</Text>
                     <Text style={styles.cardSub}>
-                      {POS_MAP[item.posicao] || item.posicao} · {item.clube}
+                      {POS_LABEL[item.posicao] || item.posicao} · {item.clube}
                     </Text>
                   </View>
                 </View>

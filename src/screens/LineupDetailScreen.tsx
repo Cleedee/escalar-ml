@@ -28,17 +28,9 @@ import Badge from '../components/Badge';
 import ErrorBanner from '../components/ErrorBanner';
 import SoccerField from '../components/SoccerField';
 import PlayerSwapModal from '../components/PlayerSwapModal';
+import { POS_LABEL } from '../services/uiHelpers';
 import { version as APP_VERSION } from '../../package.json';
 import usePageTitle from '../usePageTitle';
-
-const posicoes: Record<string, string> = {
-  GOL: 'Goleiro',
-  LAT: 'Lateral',
-  ZAG: 'Zagueiro',
-  MEI: 'Meia',
-  ATA: 'Atacante',
-  TEC: 'Técnico',
-};
 
 const MAX_VERSIONS = 10;
 
@@ -858,7 +850,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
             <View style={styles.playerTop}>
               <View style={{ flex: 1 }}>
                 <View style={styles.playerPosRow}>
-                  <Text style={styles.playerPos}>{posicoes[p.posicao] || p.posicao}</Text>
+                  <Text style={styles.playerPos}>{POS_LABEL[p.posicao] || p.posicao}</Text>
                   {entrouEmCampo(p.atleta_id) === false && hasPontuados && <Badge variant="danger" label="NÃO JOGOU" size="sm" />}
                   {foiSubstituido && <Badge variant="danger" label="SUBSTITUÍDO" size="sm" />}
                   {isSubstituto && <Badge variant="primary" label="ENTROU" size="sm" />}
@@ -958,7 +950,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
                 <View style={styles.reservaTop}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.playerPosRow}>
-                      <Text style={styles.reservaPos}>{posicoes[pos] || pos}</Text>
+                      <Text style={styles.reservaPos}>{POS_LABEL[pos] || pos}</Text>
                       {reserva.luxo && <Badge variant="accent" label="LUXO" size="sm" />}
                     </View>
                     <Text style={styles.reservaName}>{reserva.apelido} · {reserva.clube}</Text>

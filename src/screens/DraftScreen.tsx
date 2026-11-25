@@ -22,22 +22,13 @@ import {
 } from '../types';
 import { fetchClubes, fetchMercado, fetchStatus, postProjetar } from '../services/api';
 import { saveLineup } from '../services/storage';
+import { labelFoco, POS_ID, POS_LABEL, parseFormacao } from '../services/uiHelpers';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import LoadingButton from '../components/LoadingButton';
 import usePageTitle from '../usePageTitle';
-
-const POS_ID: Record<string, number> = { GOL: 1, LAT: 2, ZAG: 3, MEI: 4, ATA: 5, TEC: 6 };
-const POS_LABEL: Record<string, string> = {
-  GOL: 'Goleiro', LAT: 'Lateral', ZAG: 'Zagueiro', MEI: 'Meia', ATA: 'Atacante', TEC: 'Técnico',
-};
-
-function parseFormacao(formacao: string): { def: number; mei: number; ata: number } {
-  const parts = formacao.split('-').map(Number);
-  return { def: parts[0] ?? 4, mei: parts[1] ?? 3, ata: parts[2] ?? 3 };
-}
 
 function criarSlotsIniciais(formacao: string): Record<string, { label: string; posicoesPermitidas: string[] }> {
   const { def, mei, ata } = parseFormacao(formacao);
@@ -63,16 +54,6 @@ function getPosIdsFromPermitidas(permitidas: string[]): number[] {
 }
 
 const FOCOS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-
-function labelFoco(v: number): string {
-  if (v === 1.0) return 'Só Pontuação';
-  if (v >= 0.8) return '↑ Pontuação';
-  if (v === 0.7) return 'Valoriz. Leve';
-  if (v === 0.5) return 'Equilibrado';
-  if (v === 0.3) return '↑ Valorização';
-  if (v === 0.0) return 'Só Valorização';
-  return v.toFixed(1);
-}
 
 export default function DraftScreen({ route, navigation }: any) {
   usePageTitle('Montar na Mão');
