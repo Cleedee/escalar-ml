@@ -24,6 +24,7 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import ErrorBanner from '../components/ErrorBanner';
 import SoccerField from '../components/SoccerField';
 import PlayerSwapModal from '../components/PlayerSwapModal';
 import { version as APP_VERSION } from '../../package.json';
@@ -96,6 +97,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
   const [projetando, setProjetando] = useState(false);
   const [showField, setShowField] = useState(false);
   const [clubeMap, setClubeMap] = useState<Record<string, string>>({});
+  const [clubesError, setClubesError] = useState<string | null>(null);
+  const [pontuadosError, setPontuadosError] = useState<string | null>(null);
 
   // ── Swap modal state ──
   const [swapVisible, setSwapVisible] = useState(false);
@@ -119,8 +122,9 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         const map: Record<string, string> = {};
         for (const [id, c] of Object.entries(clubes)) map[id] = c.nome;
         setClubeMap(map);
+        setClubesError(null);
       })
-      .catch(() => {});
+      .catch(() => setClubesError('Não foi possível carregar a lista de clubes.'));
   }, []);
 
   // ── Rival comparison (Fase 4.1) ──
@@ -607,9 +611,10 @@ export default function LineupDetailScreen({ route, navigation }: any) {
     setSubstituicaoResult(response.substituicao ?? null);
     setPontuadosAtletas(null);
     setPartidasData(null);
+    setPontuadosError(null);
     fetchPontuados(lineup.rodada)
       .then((data) => setPontuadosAtletas(data.atletas))
-      .catch(() => {});
+      .catch(() => setPontuadosError('Pontuação real não disponível para esta rodada.'));
     fetchPartidas(lineup.rodada)
       .then(setPartidasData)
       .catch(() => {});
@@ -663,6 +668,8 @@ export default function LineupDetailScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner}>
+      <ErrorBanner message={clubesError} />
+      <ErrorBanner message={pontuadosError} />
       <Card style={styles.resultHeader}>
         <Text style={styles.resultTitle}>{lineup.nome}</Text>
         <Text style={styles.resultRodada}>Rodada {lineup.rodada}</Text>

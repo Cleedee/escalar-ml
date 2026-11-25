@@ -15,6 +15,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Badge from '../components/Badge';
+import ErrorBanner from '../components/ErrorBanner';
 import usePageTitle from '../usePageTitle';
 
 type SortKey = 'preco_desc' | 'preco_asc' | 'media_desc' | 'media_asc';
@@ -68,16 +69,18 @@ export default function AtletasScreen({ navigation }: any) {
   const [showPosicao, setShowPosicao] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [showOrdenar, setShowOrdenar] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFetch = (q: string, p: string, s: string) => {
     setLoading(true);
+    setErrorMsg(null);
     fetchAtletas({ q: q || undefined, posicao: p || undefined, status: s || undefined })
       .then((data) => {
         setAtletas(data.atletas);
         setTotal(data.total);
       })
-      .catch(() => {})
+      .catch(() => setErrorMsg('Erro ao buscar atletas. Verifique sua conexão.'))
       .finally(() => setLoading(false));
   };
 
@@ -124,6 +127,8 @@ export default function AtletasScreen({ navigation }: any) {
         value={query}
         onChangeText={handleQueryChange}
       />
+
+      <ErrorBanner message={errorMsg} onRetry={() => doFetch(query, posicao, status)} />
 
       <TouchableOpacity style={styles.sectionToggle} onPress={() => setShowPosicao((v) => !v)} activeOpacity={0.7}>
         <SectionHeader label="Posição" action={<Text style={styles.chevron}>{showPosicao ? '▲' : '▼'}</Text>} />

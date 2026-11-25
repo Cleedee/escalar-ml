@@ -20,6 +20,7 @@ import SectionHeader from '../components/SectionHeader';
 import usePageTitle from '../usePageTitle';
 import Button from '../components/Button';
 import Badge from '../components/Badge';
+import ErrorBanner from '../components/ErrorBanner';
 
 interface AthleteChip {
   atleta_id: number;
@@ -113,8 +114,10 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [atribuidoTeamId, setAtribuidoTeamId] = useState<string | undefined>(undefined);
   const [showAtribuir, setShowAtribuir] = useState(false);
   const [expandedLiga, setExpandedLiga] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
+    setFetchError(null);
     Promise.all([fetchMercado(), fetchClubes()])
       .then(([mercado, clubes]) => {
         setMercadoAtletas(Object.values(mercado.atletas));
@@ -146,7 +149,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => setFetchError('Não foi possível carregar o mercado. Verifique sua conexão.'));
     fetchStatus()
       .then((s) => setStatusMercado(s.status_mercado))
       .catch(() => {});
@@ -280,6 +283,18 @@ export default function NewLineupScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.title}>Nova Escalação</Text>
         <Text style={styles.subtitle}>Rodada {rodada}</Text>
+
+        <ErrorBanner message={fetchError} onRetry={() => {
+          setFetchError(null);
+          Promise.all([fetchMercado(), fetchClubes()]).then(([mercado, clubes]) => {
+            setMercadoAtletas(Object.values(mercado.atletas));
+            const map: Record<string, string> = {};
+            for (const [id, c] of Object.entries(clubes)) map[id] = c.nome;
+            setClubeMap(map);
+          }).catch(() => setFetchError('Não foi possível carregar o mercado.'));
+          fetchStatus().then((s) => setStatusMercado(s.status_mercado)).catch(() => {});
+          getLeagues().then(setLeagues).catch(() => {});
+        }} />
 
         {mercadoFechado && (
           <Card style={styles.marketBanner}>
