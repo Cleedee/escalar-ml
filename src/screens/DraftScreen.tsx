@@ -479,13 +479,28 @@ export default function DraftScreen({ route, navigation }: any) {
           />
 
           <SectionHeader label="Orçamento (C$)" />
-          <TextInput
-            style={styles.input}
-            value={orcamento}
-            onChangeText={setOrcamento}
-            keyboardType="decimal-pad"
-            placeholderTextColor={theme.colors.textMuted}
-          />
+          <View style={styles.budgetRow}>
+            <TextInput
+              style={[styles.input, styles.budgetInput]}
+              value={orcamento}
+              onChangeText={setOrcamento}
+              keyboardType="decimal-pad"
+              placeholderTextColor={theme.colors.textMuted}
+            />
+            <View style={styles.budgetSuggestions}>
+              {[50, 75, 100, 125, 150, 200].map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.budgetChip, Math.abs(parseFloat(orcamento) - v) < 0.01 && styles.budgetChipActive]}
+                  onPress={() => setOrcamento(String(v))}
+                >
+                  <Text style={[styles.budgetChipText, Math.abs(parseFloat(orcamento) - v) < 0.01 && styles.budgetChipTextActive]}>
+                    C$ {v}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
           <SectionHeader label="Formação" />
           <View style={styles.pickerRow}>
@@ -689,6 +704,39 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
+  },
+  budgetRow: {
+    gap: theme.spacing.sm,
+  },
+  budgetInput: {
+    width: '100%',
+  },
+  budgetSuggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: theme.spacing.sm,
+  },
+  budgetChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  budgetChipActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryGlow,
+  },
+  budgetChipText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  budgetChipTextActive: {
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
   },
   pickerRow: {
     flexDirection: 'row',
