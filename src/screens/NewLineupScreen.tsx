@@ -115,6 +115,8 @@ export default function NewLineupScreen({ route, navigation }: any) {
   const [showAtribuir, setShowAtribuir] = useState(false);
   const [expandedLiga, setExpandedLiga] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [showPerfilHelp, setShowPerfilHelp] = useState(false);
+  const [showFocoHelp, setShowFocoHelp] = useState(false);
 
   useEffect(() => {
     setFetchError(null);
@@ -390,7 +392,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           <SectionHeader
             label="Perfil de Risco"
             action={
-              <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+              <TouchableOpacity onPress={() => setShowPerfilHelp(true)}>
                 <Text style={styles.helpBtn}>?</Text>
               </TouchableOpacity>
             }
@@ -418,7 +420,7 @@ export default function NewLineupScreen({ route, navigation }: any) {
           <SectionHeader
             label="Foco"
             action={
-              <TouchableOpacity onPress={() => navigation.navigate('Help')}>
+              <TouchableOpacity onPress={() => setShowFocoHelp(true)}>
                 <Text style={styles.helpBtn}>?</Text>
               </TouchableOpacity>
             }
@@ -617,6 +619,82 @@ export default function NewLineupScreen({ route, navigation }: any) {
                 ))
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Perfil help modal ── */}
+      <Modal visible={showPerfilHelp} transparent animationType="fade">
+        <View style={styles.helpModalOverlay}>
+          <View style={styles.helpModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.helpModalTitle}>Perfil de Risco</Text>
+              <TouchableOpacity onPress={() => setShowPerfilHelp(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.helpModalBody}>
+              Define o <Text style={{ fontWeight: theme.fontWeight.bold, color: theme.colors.text }}>nível de risco</Text> da escalação:
+            </Text>
+            <View style={styles.helpTable}>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 90, fontWeight: theme.fontWeight.semibold }]}>Conservador</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Prefere atletas com muitos jogos e alta escalação. Evita riscos.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 90, fontWeight: theme.fontWeight.semibold }]}>Neutro</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Sem viés adicional. Equilíbrio entre confiabilidade e pontuação.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 90, fontWeight: theme.fontWeight.semibold, color: theme.colors.danger }]}>Agressivo</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Busca atletas com alto teto. Assume mais risco por pontos altos.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 90, fontWeight: theme.fontWeight.semibold, color: theme.colors.accent }]}>Upside</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Prioriza quem costuma explodir (p90 alto). Alto risco, alto retorno.</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.helpGotIt} onPress={() => setShowPerfilHelp(false)}>
+              <Text style={styles.helpGotItText}>Entendi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Foco help modal ── */}
+      <Modal visible={showFocoHelp} transparent animationType="fade">
+        <View style={styles.helpModalOverlay}>
+          <View style={styles.helpModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.helpModalTitle}>Foco</Text>
+              <TouchableOpacity onPress={() => setShowFocoHelp(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.helpModalBody}>
+              Controla o <Text style={{ fontWeight: theme.fontWeight.bold, color: theme.colors.text }}>equilíbrio entre pontuação e valorização</Text>:
+            </Text>
+            <View style={styles.helpTable}>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 70, fontWeight: theme.fontWeight.semibold }]}>1.0 (máx)</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Só pontuação. Ignora valorização.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 70, fontWeight: theme.fontWeight.semibold }]}>0.7–0.9</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Pontuação como prioridade, mas considera valorização levemente.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 70, fontWeight: theme.fontWeight.semibold }]}>0.5</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Meio-termo. Valorização já tem peso relevante.</Text>
+              </View>
+              <View style={styles.helpRow}>
+                <Text style={[styles.helpCell, { width: 70, fontWeight: theme.fontWeight.semibold }]}>0.0–0.3</Text>
+                <Text style={[styles.helpCell, { flex: 1 }]}>Valorização vira prioridade. Abre mão de pontuação por potencial de alta.</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.helpGotIt} onPress={() => setShowFocoHelp(false)}>
+              <Text style={styles.helpGotItText}>Entendi</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1034,5 +1112,65 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.sm,
     color: theme.colors.textMuted,
     marginTop: 2,
+  },
+  helpModalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing['2xl'],
+  },
+  helpModalContent: {
+    backgroundColor: theme.colors.surfaceElevated,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing['2xl'],
+    maxWidth: 360,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  helpModalTitle: {
+    fontFamily: theme.fonts.heading,
+    fontSize: theme.fontSize.xl,
+    color: theme.colors.text,
+    letterSpacing: theme.letterSpacing.tight,
+  },
+  helpModalBody: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  helpTable: {
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  helpRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  helpCell: {
+    padding: theme.spacing.md,
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  helpGotIt: {
+    marginTop: theme.spacing.xl,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  helpGotItText: {
+    fontFamily: theme.fonts.body,
+    color: '#fff',
+    fontSize: theme.fontSize.base,
+    fontWeight: theme.fontWeight.semibold,
   },
 });

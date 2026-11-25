@@ -103,6 +103,8 @@ export default function DraftScreen({ route, navigation }: any) {
 
   const [projetando, setProjetando] = useState(false);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const [showPerfilHelp, setShowPerfilHelp] = useState(false);
+  const [showFocoHelp, setShowFocoHelp] = useState(false);
 
   const slotDefs = useMemo(() => criarSlotsIniciais(formacao), [formacao]);
   const allSlotKeys = Object.keys(slotDefs);
