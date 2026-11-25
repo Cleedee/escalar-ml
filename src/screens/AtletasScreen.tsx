@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CartolaAthlete } from '../types';
+import { Atleta, CartolaAthlete } from '../types';
 import { fetchAtletas } from '../services/api';
 import { theme } from '../theme';
 import Card from '../components/Card';

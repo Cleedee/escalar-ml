@@ -481,7 +481,7 @@ export default function DraftScreen({ route, navigation }: any) {
           />
 
           <SectionHeader label="Orçamento (C$)" />
-          <View style={styles.budgetRow}>
+          <View style={styles.budgetInputRow}>
             <TextInput
               style={[styles.input, styles.budgetInput]}
               value={orcamento}
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
   },
-  budgetRow: {
+  budgetInputRow: {
     gap: theme.spacing.sm,
   },
   budgetInput: {

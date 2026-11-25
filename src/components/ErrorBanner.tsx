@@ -36,7 +36,7 @@ export default function ErrorBanner({
   if (!visible || !message) return null;
 
   return (
-    <View
+    <TouchableOpacity
       style={[
         styles.banner,
         fading && styles.bannerFading,
@@ -56,7 +56,7 @@ export default function ErrorBanner({
       <TouchableOpacity onPress={handleDismiss} style={styles.dismissBtn}>
         <Text style={styles.dismissBtnText}>✕</Text>
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 
