@@ -1019,29 +1019,29 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
               <TextInput style={styles.input} value={leagueNome} onChangeText={setLeagueNome} placeholder="Nome da liga" placeholderTextColor="#64748b" />
 
               <Text style={styles.label}>Rodada Inicial</Text>
-              <View style={styles.pickerRow}>
-                {RODADAS.filter((r) => r <= leagueFinal).map((r) => (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.pickerItemSm, leagueInicial === r && styles.pickerActive]}
-                    onPress={() => setLeagueInicial(r)}
-                  >
-                    <Text style={[styles.pickerTextSm, leagueInicial === r && styles.pickerTextActive]}>{r}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.rodadaInputRow}>
+                <TouchableOpacity style={styles.rodadaBtn} onPress={() => setLeagueInicial(Math.max(1, leagueInicial - 1))}>
+                  <Text style={styles.rodadaBtnText}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.rodadaValueBox, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryGlow }]}>
+                  <Text style={[styles.rodadaValueText, { color: theme.colors.primary }]}>{leagueInicial}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.rodadaBtn} onPress={() => setLeagueInicial(Math.min(leagueFinal, leagueInicial + 1))}>
+                  <Text style={styles.rodadaBtnText}>+</Text>
+                </TouchableOpacity>
               </View>
 
               <Text style={styles.label}>Rodada Final</Text>
-              <View style={styles.pickerRow}>
-                {RODADAS.filter((r) => r >= leagueInicial).map((r) => (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.pickerItemSm, leagueFinal === r && styles.pickerActive]}
-                    onPress={() => setLeagueFinal(r)}
-                  >
-                    <Text style={[styles.pickerTextSm, leagueFinal === r && styles.pickerTextActive]}>{r}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.rodadaInputRow}>
+                <TouchableOpacity style={styles.rodadaBtn} onPress={() => setLeagueFinal(Math.max(leagueInicial, leagueFinal - 1))}>
+                  <Text style={styles.rodadaBtnText}>−</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.rodadaValueBox, { borderColor: theme.colors.info, backgroundColor: theme.colors.infoGlow }]}>
+                  <Text style={[styles.rodadaValueText, { color: theme.colors.info }]}>{leagueFinal}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.rodadaBtn} onPress={() => setLeagueFinal(Math.min(38, leagueFinal + 1))}>
+                  <Text style={styles.rodadaBtnText}>+</Text>
+                </TouchableOpacity>
               </View>
 
               {leagueInicial === leagueFinal ? (
@@ -1464,16 +1464,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     alignItems: 'center',
   },
-  pickerItemSm: {
-    width: 38,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    backgroundColor: theme.colors.bg,
-    alignItems: 'center',
-  },
-  pickerActive: {
+  
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryGlow,
   },
@@ -1855,5 +1846,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textMuted,
     marginLeft: theme.spacing.sm,
+  },
+  rodadaInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  rodadaBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rodadaBtnText: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize['2xl'],
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fontWeight.bold,
+  },
+  rodadaValueBox: {
+    minWidth: 60,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rodadaValueText: {
+    fontFamily: theme.fonts.heading,
+    fontSize: theme.fontSize['3xl'],
+    fontWeight: theme.fontWeight.bold,
+    letterSpacing: theme.letterSpacing.tight,
   },
 });
