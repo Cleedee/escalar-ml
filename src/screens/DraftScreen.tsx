@@ -836,13 +836,13 @@ const styles = StyleSheet.create({
   },
   slotRight: { flexDirection: 'row', gap: theme.spacing.xs, marginLeft: theme.spacing.sm, marginTop: 20 },
   slotSwapBtn: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: theme.colors.surfaceHighlight,
     alignItems: 'center', justifyContent: 'center',
   },
   slotSwapText: { color: theme.colors.textSecondary, fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.bold },
   slotRemoveBtn: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(239,68,68,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },

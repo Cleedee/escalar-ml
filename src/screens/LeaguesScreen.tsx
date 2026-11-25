@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pickerItemSm: {
-    width: 38,
+    width: 44,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.sm,
     borderWidth: 1,

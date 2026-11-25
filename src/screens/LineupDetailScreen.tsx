@@ -1134,7 +1134,7 @@ const styles = StyleSheet.create({
   captainBtnText: { fontSize: theme.fontSize.lg },
   captainDim: { fontSize: theme.fontSize.lg, color: theme.colors.textMuted },
   playerActions: { flexDirection: 'row', gap: theme.spacing.xs },
-  actionBtn: { width: 26, height: 26, borderRadius: theme.borderRadius.full, backgroundColor: theme.colors.surfaceHighlight, alignItems: 'center', justifyContent: 'center' },
+  actionBtn: { width: 40, height: 40, borderRadius: theme.borderRadius.full, backgroundColor: theme.colors.surfaceHighlight, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { color: theme.colors.textSecondary, fontFamily: theme.fonts.body, fontSize: theme.fontSize.sm, fontWeight: theme.fontWeight.bold },
   playerStats: { flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: theme.spacing.md },
   playerStat: { alignItems: 'center' },
