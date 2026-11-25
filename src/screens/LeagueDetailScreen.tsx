@@ -20,6 +20,7 @@ import { consolidateLeague } from '../services/consolidation';
 import { theme } from '../theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import LoadingButton from '../components/LoadingButton';
 import Badge from '../components/Badge';
 import usePageTitle from '../usePageTitle';
 
@@ -1198,13 +1199,14 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                   </TouchableOpacity>
                 </View>
                 {gerenciandoBot && (
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, botLoading && { opacity: 0.5 }]}
+                  <LoadingButton
+                    variant="primary"
+                    label="Escalar"
+                    loading={botLoading}
+                    loadingLabel="Escalando..."
                     onPress={handleEscalarBot}
                     disabled={botLoading}
-                  >
-                    <Text style={styles.confirmBtnText}>{botLoading ? 'Escalando...' : 'Escalar'}</Text>
-                  </TouchableOpacity>
+                  />
                 )}
               </View>
             </View>

@@ -23,6 +23,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
+import LoadingButton from '../components/LoadingButton';
 import Badge from '../components/Badge';
 import ErrorBanner from '../components/ErrorBanner';
 import SoccerField from '../components/SoccerField';
@@ -1032,7 +1033,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
               </View>
             ))}
           </Card>
-          <Button variant="primary" label={salvandoSubstituicao ? 'Salvando...' : 'Salvar substituição'} onPress={handleSalvarSubstituicao} disabled={salvandoSubstituicao} />
+          <LoadingButton variant="primary" label="Salvar substituição" loading={salvandoSubstituicao} loadingLabel="Salvando..." onPress={handleSalvarSubstituicao} disabled={salvandoSubstituicao} />
         </>
       )}
 
@@ -1040,7 +1041,7 @@ export default function LineupDetailScreen({ route, navigation }: any) {
         <Button variant="primary" label="Simular substituição" onPress={handleSimularSubstituicao} />
       )}
 
-      <Button variant="outline" label={projetando ? "Projetando..." : "Atualizar projeções"} onPress={handleProjetar} disabled={projetando} />
+      <LoadingButton variant="outline" label="Atualizar projeções" loading={projetando} loadingLabel="Projetando..." onPress={handleProjetar} disabled={projetando} />
 
       <Button variant="primary" label="Gerar nova escalação"
         onPress={() => {

@@ -19,6 +19,7 @@ import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import usePageTitle from '../usePageTitle';
 import Button from '../components/Button';
+import LoadingButton from '../components/LoadingButton';
 import Badge from '../components/Badge';
 import ErrorBanner from '../components/ErrorBanner';
 
@@ -511,16 +512,13 @@ export default function NewLineupScreen({ route, navigation }: any) {
           </View>
         </Card>
 
-        {loading ? (
-          <TouchableOpacity
-            style={styles.generateBtn}
-            disabled
-          >
-            <ActivityIndicator color="#fff" />
-          </TouchableOpacity>
-        ) : (
-          <Button variant="primary" label="Gerar escalação" onPress={handleGenerate} />
-        )}
+        <LoadingButton
+          variant="primary"
+          label="Gerar escalação"
+          loading={loading}
+          loadingLabel="Gerando..."
+          onPress={handleGenerate}
+        />
         {feedback !== '' && (
           <Text style={styles.feedback}>{feedback}</Text>
         )}

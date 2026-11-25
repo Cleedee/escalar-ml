@@ -26,6 +26,7 @@ import { theme } from '../theme';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
+import LoadingButton from '../components/LoadingButton';
 import usePageTitle from '../usePageTitle';
 
 const POS_ID: Record<string, number> = { GOL: 1, LAT: 2, ZAG: 3, MEI: 4, ATA: 5, TEC: 6 };
@@ -606,17 +607,21 @@ export default function DraftScreen({ route, navigation }: any) {
           </Card>
         )}
 
-        <Button
+        <LoadingButton
           variant="primary"
-          label={projetando ? 'Projetando...' : 'Projetar escalação'}
+          label="Projetar escalação"
+          loading={projetando}
+          loadingLabel="Projetando..."
           onPress={handleProjetar}
-          disabled={!todosStartersPreenchidos || estouraOrcamento || projetando}
+          disabled={!todosStartersPreenchidos || estouraOrcamento}
         />
-        <Button
+        <LoadingButton
           variant="outline"
-          label={salvandoRascunho ? 'Salvando...' : 'Salvar rascunho'}
+          label="Salvar rascunho"
+          loading={salvandoRascunho}
+          loadingLabel="Salvando..."
           onPress={handleSalvarRascunho}
-          disabled={!todosStartersPreenchidos || estouraOrcamento || salvandoRascunho}
+          disabled={!todosStartersPreenchidos || estouraOrcamento}
         />
         <Button variant="outline" label="Voltar" onPress={() => navigation.goBack()} />
       </ScrollView>
