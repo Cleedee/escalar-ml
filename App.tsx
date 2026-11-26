@@ -24,6 +24,8 @@ import LeaguesScreen from './src/screens/LeaguesScreen';
 import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
 import HelpScreen from './src/screens/HelpScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import OnboardingModal from './src/components/OnboardingModal';
+import { getOnboardingDone } from './src/services/storage';
 
 const Tab = createBottomTabNavigator();
 const StatusStackNav = createNativeStackNavigator();
@@ -108,6 +110,8 @@ export default function App() {
 
   const [splashDone, setSplashDone] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{ latest: string; current: string } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -120,6 +124,19 @@ export default function App() {
     const t = setTimeout(() => setSplashDone(true), 3000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (!splashDone) return;
+    let cancelled = false;
+    (async () => {
+      const onboardingDone = await getOnboardingDone();
+      if (!cancelled && !onboardingDone) {
+        setShowOnboarding(true);
+      }
+      setAppReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, [splashDone]);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +164,12 @@ export default function App() {
     );
   }
 
+  if (!appReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg }} />
+    );
+  }
+
   return (
     <NavigationContainer>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.bg} />
@@ -156,6 +179,10 @@ export default function App() {
         currentVersion={updateInfo?.current ?? APP_VERSION}
         latestVersion={updateInfo?.latest ?? ''}
         onClose={() => setUpdateInfo(null)}
+      />
+      <OnboardingModal
+        visible={showOnboarding}
+        onDone={() => setShowOnboarding(false)}
       />
       <Tab.Navigator
         screenOptions={{

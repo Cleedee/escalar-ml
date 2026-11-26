@@ -106,3 +106,16 @@ export async function importAllData(data: BackupData, merge = false): Promise<{ 
     return { lineups: data.lineups.length, leagues: data.leagues.length };
   }
 }
+
+// ── Onboarding ──
+
+const ONBOARDING_KEY = '@escalarml/onboarding_done';
+
+export async function getOnboardingDone(): Promise<boolean> {
+  const val = await storage.getItem(ONBOARDING_KEY);
+  return val === 'true';
+}
+
+export async function setOnboardingDone(): Promise<void> {
+  await storage.setItem(ONBOARDING_KEY, 'true');
+}
