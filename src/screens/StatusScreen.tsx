@@ -116,6 +116,9 @@ export default function StatusScreen({ navigation }: any) {
       <View style={styles.footer}>
         <Text style={styles.footerText}>{API_BASE}</Text>
         <Text style={styles.footerSub}>Versão {APP_VERSION} · {BUILD_DATE}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Text style={styles.settingsLink}>⚙ Configurações</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -251,5 +254,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.xs,
     color: theme.colors.textMuted,
     marginTop: 2,
+  },
+  settingsLink: {
+    fontFamily: theme.fonts.body,
+    fontSize: theme.fontSize.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeight.semibold,
+    marginTop: theme.spacing.sm,
   },
 });

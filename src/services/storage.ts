@@ -68,3 +68,41 @@ export async function deleteLeague(id: string): Promise<void> {
   const filtered = leagues.filter((l) => l.id !== id);
   await storage.setItem(LEAGUES_KEY, JSON.stringify(filtered));
 }
+
+// ── Export/Import ──
+
+export interface BackupData {
+  version: string;
+  exported_at: string;
+  lineups: Lineup[];
+  leagues: League[];
+}
+
+export async function exportAllData(): Promise<BackupData> {
+  const lineups = await getLineups();
+  const leagues = await getLeagues();
+  return {
+    version: '1',
+    exported_at: new Date().toISOString(),
+    lineups,
+    leagues,
+  };
+}
+
+export async function importAllData(data: BackupData, merge = false): Promise<{ lineups: number; leagues: number }> {
+  if (merge) {
+    const existingLineups = await getLineups();
+    const existingLeagues = await getLeagues();
+    const existingLineupIds = new Set(existingLineups.map((l) => l.id));
+    const existingLeagueIds = new Set(existingLeagues.map((l) => l.id));
+    const newLineups = data.lineups.filter((l) => !existingLineupIds.has(l.id));
+    const newLeagues = data.leagues.filter((l) => !existingLeagueIds.has(l.id));
+    await storage.setItem(LINEUPS_KEY, JSON.stringify([...newLineups, ...existingLineups]));
+    await storage.setItem(LEAGUES_KEY, JSON.stringify([...newLeagues, ...existingLeagues]));
+    return { lineups: newLineups.length, leagues: newLeagues.length };
+  } else {
+    await storage.setItem(LINEUPS_KEY, JSON.stringify(data.lineups));
+    await storage.setItem(LEAGUES_KEY, JSON.stringify(data.leagues));
+    return { lineups: data.lineups.length, leagues: data.leagues.length };
+  }
+}

@@ -23,6 +23,7 @@ import UpsideScreen from './src/screens/UpsideScreen';
 import LeaguesScreen from './src/screens/LeaguesScreen';
 import LeagueDetailScreen from './src/screens/LeagueDetailScreen';
 import HelpScreen from './src/screens/HelpScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const StatusStackNav = createNativeStackNavigator();
@@ -35,6 +36,7 @@ function StatusStack() {
     <StatusStackNav.Navigator screenOptions={{ headerShown: false }}>
       <StatusStackNav.Screen name="StatusMain" component={StatusScreen} />
       <StatusStackNav.Screen name="StatusDetail" component={StatusDetailScreen} />
+      <StatusStackNav.Screen name="Settings" component={SettingsScreen} />
     </StatusStackNav.Navigator>
   );
 }
