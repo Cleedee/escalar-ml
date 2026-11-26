@@ -767,11 +767,6 @@ export default function LeagueDetailScreen({ route, navigation }: any) {
                 <Text style={styles.statTotal}>
                   {item.total_acumulado.toFixed(2)}
                 </Text>
-                {modalidade === 'patrimonio' ? (
-                  <Text style={styles.statSub}>Pat: {item.patrimonio.toFixed(2)}</Text>
-                ) : (
-                  <Text style={styles.statSub}>Pont: {item.ranking.toFixed(2)}</Text>
-                )}
               </View>
             </TouchableOpacity>
             <View style={styles.teamActions}>
